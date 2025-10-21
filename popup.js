@@ -96,6 +96,33 @@ updateSearchModeIndicator();
 // Load Use Prompt state on page load
 loadUsePromptState();
 
+// Auto-resize textarea
+function autoResizeTextarea() {
+  const textarea = document.getElementById('query');
+  
+  // Reset height to get accurate scrollHeight
+  textarea.style.height = 'auto';
+  
+  // Set new height based on content
+  const newHeight = Math.min(textarea.scrollHeight, 200); // Max 200px
+  textarea.style.height = newHeight + 'px';
+  
+  // Show scrollbar if content exceeds max height
+  if (textarea.scrollHeight > 200) {
+    textarea.style.overflowY = 'auto';
+  } else {
+    textarea.style.overflowY = 'hidden';
+  }
+}
+
+// Add event listener for textarea auto-resize
+const queryTextarea = document.getElementById('query');
+queryTextarea.addEventListener('input', autoResizeTextarea);
+queryTextarea.addEventListener('change', autoResizeTextarea);
+
+// Initial resize
+autoResizeTextarea();
+
 // Track if search is in progress
 let searchInProgress = false;
 let abortSearch = false;
@@ -287,9 +314,10 @@ function displayResults(results) {
   });
 }
 
-// Allow search on Enter key
-document.getElementById("query").addEventListener("keypress", (e) => {
-  if (e.key === "Enter") {
+// Allow search on Ctrl+Enter or Shift+Enter (Enter alone creates new line)
+document.getElementById("query").addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && (e.ctrlKey || e.shiftKey)) {
+    e.preventDefault();
     document.getElementById("searchBtn").click();
   }
 });

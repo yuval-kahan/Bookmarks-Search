@@ -66,6 +66,12 @@
       border-radius: 8px;
       font-size: 14px;
       transition: all 0.3s ease;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      resize: none;
+      overflow-y: hidden;
+      min-height: 44px;
+      max-height: 200px;
+      line-height: 1.5;
     }
     
     #query:focus {
@@ -290,7 +296,7 @@
     </div>
     
     <div class="search-box">
-      <input type="text" id="query" placeholder="Search your bookmarks...">
+      <textarea id="query" placeholder="Search your bookmarks..." rows="1"></textarea>
     </div>
     
     <div class="button-group">
