@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "AI Bookmark Search",
+  "version": "1.0",
+  "description": "Search bookmarks with AI using Ollama or API providers",
+  "permissions": ["bookmarks", "storage"],
+  "host_permissions": [
+    "http://localhost:11434/*",
+    "http://127.0.0.1:11434/*",
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://generativelanguage.googleapis.com/*",
+    "https://api.x.ai/*",
+    "https://api.cohere.ai/*",
+    "https://api.mistral.ai/*",
+    "https://api.perplexity.ai/*",
+    "https://api.groq.com/*",
+    "https://api.together.xyz/*",
+    "https://api.deepseek.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}
