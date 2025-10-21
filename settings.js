@@ -356,6 +356,92 @@ document.getElementById('apiModelSelect').addEventListener('change', (e) => {
     modelCustom.style.display = 'none';
     modelCustom.value = '';
   }
+  
+  // Check verification status when model changes
+  checkAPIVerification();
+});
+
+// Check API verification status
+async function checkAPIVerification() {
+  const provider = document.getElementById('apiProvider').value;
+  const modelSelect = document.getElementById('apiModelSelect').value;
+  const modelCustom = document.getElementById('apiModelCustom').value.trim();
+  const apiKey = document.getElementById('apiKey').value.trim();
+  const statusDiv = document.getElementById('apiVerificationStatus');
+  const statusIcon = statusDiv.querySelector('.verify-icon');
+  const statusText = statusDiv.querySelector('.verify-text');
+  
+  if (!provider || !apiKey) {
+    statusDiv.style.display = 'none';
+    return;
+  }
+  
+  const model = modelSelect === 'custom' ? modelCustom : modelSelect;
+  if (!model) {
+    statusDiv.style.display = 'none';
+    return;
+  }
+  
+  statusDiv.style.display = 'flex';
+  
+  // Create verification key
+  const verificationKey = `api_verified_${provider}_${model}`;
+  
+  // Check if already verified
+  chrome.storage.local.get([verificationKey], async (data) => {
+    if (data[verificationKey] === 'verified') {
+      statusDiv.className = 'api-verification-status verified';
+      statusIcon.textContent = '✅';
+      statusText.textContent = 'Verified - Ready to use';
+      return;
+    } else if (data[verificationKey] === 'failed') {
+      statusDiv.className = 'api-verification-status failed';
+      statusIcon.textContent = '❌';
+      statusText.textContent = 'Verification failed';
+      return;
+    }
+    
+    // Not verified yet - run verification
+    statusDiv.className = 'api-verification-status checking';
+    statusIcon.textContent = '⏳';
+    statusText.textContent = 'Verifying...';
+    
+    // Send verification request to background
+    chrome.runtime.sendMessage(
+      {
+        action: 'verifyAPI',
+        provider: provider,
+        apiKey: apiKey,
+        model: model
+      },
+      (response) => {
+        if (response.success) {
+          statusDiv.className = 'api-verification-status verified';
+          statusIcon.textContent = '✅';
+          statusText.textContent = 'Verified - Ready to use';
+          
+          // Save verification result
+          chrome.storage.local.set({ [verificationKey]: 'verified' });
+        } else {
+          statusDiv.className = 'api-verification-status failed';
+          statusIcon.textContent = '❌';
+          statusText.textContent = `Failed: ${response.error}`;
+          
+          // Save failure (but allow retry later)
+          chrome.storage.local.set({ [verificationKey]: 'failed' });
+        }
+      }
+    );
+  });
+}
+
+// Check verification when API key changes (with debounce)
+let apiKeyTimeout;
+document.getElementById('apiKey').addEventListener('input', () => {
+  clearTimeout(apiKeyTimeout);
+  apiKeyTimeout = setTimeout(() => {
+    checkAPIVerification();
+  }, 1000); // Wait 1 second after user stops typing
 });
 
 // Close modal

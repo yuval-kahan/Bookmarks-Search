@@ -1,3 +1,20 @@
+// Helper function to get API URL for different providers
+function getAPIUrl(provider, model, apiKey) {
+  const urls = {
+    xai: "https://api.x.ai/v1/chat/completions",
+    together: "https://api.together.xyz/v1/chat/completions",
+    fireworks: "https://api.fireworks.ai/inference/v1/chat/completions",
+    deepseek: "https://api.deepseek.com/v1/chat/completions",
+    perplexity: "https://api.perplexity.ai/chat/completions",
+    cohere: "https://api.cohere.ai/v1/generate",
+    mistral: "https://api.mistral.ai/v1/chat/completions",
+    ai21: "https://api.ai21.com/studio/v1/chat/completions",
+    openrouter: "https://openrouter.ai/api/v1/chat/completions",
+    novita: "https://api.novita.ai/v3/openai/chat/completions"
+  };
+  return urls[provider] || "";
+}
+
 // Get all bookmarks recursively
 async function getAllBookmarks() {
   return new Promise((resolve) => {
@@ -484,6 +501,98 @@ async function exactMatchSearch(query) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "verifyAPI") {
+    const { provider, apiKey, model } = request;
+    
+    (async () => {
+      try {
+        const simplePrompt = "Answer only yes or no: Is this working?";
+        let apiUrl, headers, body;
+        
+        // Configure request based on provider
+        switch (provider) {
+          case "openai":
+            apiUrl = "https://api.openai.com/v1/chat/completions";
+            headers = {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            };
+            body = {
+              model: model,
+              messages: [{ role: "user", content: simplePrompt }],
+              max_tokens: 10
+            };
+            break;
+            
+          case "anthropic":
+            apiUrl = "https://api.anthropic.com/v1/messages";
+            headers = {
+              "Content-Type": "application/json",
+              "x-api-key": apiKey,
+              "anthropic-version": "2023-06-01",
+            };
+            body = {
+              model: model,
+              max_tokens: 10,
+              messages: [{ role: "user", content: simplePrompt }],
+            };
+            break;
+            
+          case "google":
+            apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            headers = { "Content-Type": "application/json" };
+            body = {
+              contents: [{ parts: [{ text: simplePrompt }] }],
+            };
+            break;
+            
+          case "groq":
+            apiUrl = "https://api.groq.com/openai/v1/chat/completions";
+            headers = {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            };
+            body = {
+              model: model,
+              messages: [{ role: "user", content: simplePrompt }],
+              max_tokens: 10
+            };
+            break;
+            
+          default:
+            // For other providers, use OpenAI-compatible format
+            apiUrl = getAPIUrl(provider, model, apiKey);
+            headers = {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${apiKey}`,
+            };
+            body = {
+              model: model,
+              messages: [{ role: "user", content: simplePrompt }],
+              max_tokens: 10
+            };
+        }
+        
+        const response = await fetch(apiUrl, {
+          method: "POST",
+          headers: headers,
+          body: JSON.stringify(body),
+        });
+        
+        if (response.ok) {
+          sendResponse({ success: true });
+        } else {
+          const errorText = await response.text();
+          sendResponse({ success: false, error: `HTTP ${response.status}` });
+        }
+      } catch (error) {
+        sendResponse({ success: false, error: error.message });
+      }
+    })();
+    
+    return true;
+  }
+  
   if (request.action === "testOllamaCors") {
     const { ollamaUrl, ollamaModel } = request;
     
