@@ -1,3 +1,98 @@
+// IndexedDB for search history
+let db;
+const DB_NAME = 'SearchHistoryDB';
+const STORE_NAME = 'searches';
+const MAX_HISTORY = 100;
+
+function initDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => {
+      db = request.result;
+      resolve(db);
+    };
+    
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        const objectStore = db.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+        objectStore.createIndex('timestamp', 'timestamp', { unique: false });
+      }
+    };
+  });
+}
+
+function saveSearchToHistory(query, results) {
+  if (!db) return;
+  
+  const transaction = db.transaction([STORE_NAME], 'readwrite');
+  const store = transaction.objectStore(STORE_NAME);
+  
+  const searchRecord = {
+    query: query,
+    results: results,
+    timestamp: new Date().toISOString()
+  };
+  
+  store.add(searchRecord);
+  
+  // Keep only last 100 records
+  const index = store.index('timestamp');
+  const countRequest = store.count();
+  
+  countRequest.onsuccess = () => {
+    if (countRequest.result > MAX_HISTORY) {
+      const getAllRequest = index.openCursor();
+      let deleteCount = countRequest.result - MAX_HISTORY;
+      
+      getAllRequest.onsuccess = (event) => {
+        const cursor = event.target.result;
+        if (cursor && deleteCount > 0) {
+          store.delete(cursor.primaryKey);
+          deleteCount--;
+          cursor.continue();
+        }
+      };
+    }
+  };
+}
+
+function loadSearchHistory() {
+  return new Promise((resolve, reject) => {
+    if (!db) {
+      reject('Database not initialized');
+      return;
+    }
+    
+    const transaction = db.transaction([STORE_NAME], 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const index = store.index('timestamp');
+    const request = index.openCursor(null, 'prev'); // Reverse order (newest first)
+    
+    const history = [];
+    
+    request.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        history.push({
+          id: cursor.primaryKey,
+          ...cursor.value
+        });
+        cursor.continue();
+      } else {
+        resolve(history);
+      }
+    };
+    
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Initialize DB on load
+initDB().catch(console.error);
+
 // Load Use Prompt state
 function loadUsePromptState() {
   chrome.storage.local.get(['usePrompt'], (data) => {
@@ -402,12 +497,18 @@ function displayResults(results) {
   });
   
   // Save successful results state
+  const query = document.getElementById('query').value;
   savePopupState({
-    query: document.getElementById('query').value,
+    query: query,
     isSearching: false,
     results: results,
     error: null
   });
+  
+  // Save to history (only if there are results)
+  if (results.length > 0) {
+    saveSearchToHistory(query, results);
+  }
 }
 
 // Allow search on Ctrl+Enter or Shift+Enter (Enter alone creates new line)
@@ -456,3 +557,99 @@ document.getElementById("stopBtn").addEventListener("click", () => {
     }, 2500);
   }
 });
+
+// History UI functions
+function openHistoryScreen() {
+  document.getElementById('historyScreen').style.display = 'block';
+  loadAndDisplayHistory();
+}
+
+function closeHistoryScreen() {
+  document.getElementById('historyScreen').style.display = 'none';
+}
+
+function openHistoryDetail(historyItem) {
+  document.getElementById('historyDetailScreen').style.display = 'block';
+  displayHistoryDetail(historyItem);
+}
+
+function closeHistoryDetail() {
+  document.getElementById('historyDetailScreen').style.display = 'none';
+}
+
+function formatDateTime(isoString) {
+  const date = new Date(isoString);
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${day}/${month}/${year} ${hours}:${minutes}`;
+}
+
+async function loadAndDisplayHistory() {
+  try {
+    const history = await loadSearchHistory();
+    const historyList = document.getElementById('historyList');
+    
+    if (history.length === 0) {
+      historyList.innerHTML = '<div style="padding: 20px; text-align: center; color: #999;">No search history yet</div>';
+      return;
+    }
+    
+    historyList.innerHTML = '';
+    
+    history.forEach((item) => {
+      const historyItem = document.createElement('div');
+      historyItem.className = 'history-item';
+      historyItem.innerHTML = `
+        <div class="history-time">🕐 ${formatDateTime(item.timestamp)}</div>
+        <div class="history-query">${item.query}</div>
+        <div class="history-count">→ ${item.results.length} results</div>
+      `;
+      
+      historyItem.addEventListener('click', () => {
+        openHistoryDetail(item);
+      });
+      
+      historyList.appendChild(historyItem);
+    });
+  } catch (error) {
+    console.error('Error loading history:', error);
+    document.getElementById('historyList').innerHTML = '<div style="padding: 20px; text-align: center; color: #e53e3e;">Error loading history</div>';
+  }
+}
+
+function displayHistoryDetail(historyItem) {
+  const detailContent = document.getElementById('historyDetailContent');
+  
+  let resultsHTML = '';
+  if (historyItem.results.length === 0) {
+    resultsHTML = '<div style="padding: 10px; color: #999;">No results found</div>';
+  } else {
+    resultsHTML = '<ul style="list-style: none; padding: 0;">';
+    historyItem.results.forEach((result) => {
+      resultsHTML += `
+        <li style="margin-bottom: 8px; padding: 10px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid #667eea;">
+          <a href="${result.url}" target="_blank" style="color: #333; text-decoration: none; font-size: 13px; display: block; word-break: break-word;">
+            ${result.title || result.url}
+          </a>
+        </li>
+      `;
+    });
+    resultsHTML += '</ul>';
+  }
+  
+  detailContent.innerHTML = `
+    <div class="history-time" style="margin-bottom: 10px;">🕐 ${formatDateTime(historyItem.timestamp)}</div>
+    <div class="history-detail-query">${historyItem.query}</div>
+    <div class="history-results-title">📌 Results (${historyItem.results.length}):</div>
+    ${resultsHTML}
+  `;
+}
+
+// Event listeners for history
+document.getElementById('historyBtn').addEventListener('click', openHistoryScreen);
+document.getElementById('historyBackBtn').addEventListener('click', closeHistoryScreen);
+document.getElementById('historyDetailBackBtn').addEventListener('click', closeHistoryDetail);

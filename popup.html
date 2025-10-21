@@ -84,6 +84,26 @@
       display: flex;
       gap: 10px;
       margin-bottom: 10px;
+      align-items: center;
+    }
+    
+    #historyBtn {
+      padding: 8px 12px;
+      background: #f8f9fa;
+      color: #667eea;
+      border: 2px solid #e0e7ff;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      white-space: nowrap;
+    }
+    
+    #historyBtn:hover {
+      background: #f0f4ff;
+      border-color: #667eea;
+      transform: translateY(-1px);
     }
     
     #searchBtn {
@@ -273,6 +293,114 @@
       color: #666;
       font-weight: 400;
     }
+    
+    .history-screen {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: white;
+      z-index: 1000;
+      overflow-y: auto;
+    }
+    
+    .history-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 15px 20px;
+      border-bottom: 2px solid #f0f0f0;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+    }
+    
+    .history-back-btn {
+      cursor: pointer;
+      font-size: 20px;
+      color: #667eea;
+      transition: transform 0.3s ease;
+    }
+    
+    .history-back-btn:hover {
+      transform: translateX(-3px);
+    }
+    
+    .history-title {
+      font-size: 18px;
+      font-weight: 600;
+      color: #667eea;
+    }
+    
+    .history-list {
+      padding: 15px;
+    }
+    
+    .history-item {
+      padding: 12px;
+      margin-bottom: 10px;
+      background: #f8f9fa;
+      border-radius: 8px;
+      border-left: 3px solid #667eea;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .history-item:hover {
+      background: #f0f4ff;
+      transform: translateX(3px);
+    }
+    
+    .history-time {
+      font-size: 11px;
+      color: #999;
+      margin-bottom: 5px;
+    }
+    
+    .history-query {
+      font-size: 13px;
+      color: #333;
+      font-weight: 500;
+      margin-bottom: 5px;
+    }
+    
+    .history-count {
+      font-size: 11px;
+      color: #667eea;
+    }
+    
+    .history-detail {
+      display: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: white;
+      z-index: 1001;
+      overflow-y: auto;
+    }
+    
+    .history-detail-content {
+      padding: 15px;
+    }
+    
+    .history-detail-query {
+      font-size: 14px;
+      font-weight: 600;
+      color: #333;
+      margin-bottom: 15px;
+      padding: 10px;
+      background: #f0f4ff;
+      border-radius: 6px;
+    }
+    
+    .history-results-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body>
@@ -302,11 +430,34 @@
     <div class="button-group">
       <button id="searchBtn">Search</button>
       <button id="stopBtn">⏹ Stop</button>
+      <button id="historyBtn">📜 History</button>
     </div>
     
     <div id="status"></div>
     <div id="error"></div>
     <ul id="results"></ul>
+  </div>
+  
+  <!-- History Screen -->
+  <div class="history-screen" id="historyScreen">
+    <div class="history-header">
+      <div class="history-back-btn" id="historyBackBtn">←</div>
+      <div class="history-title">📜 Search History</div>
+    </div>
+    <div class="history-list" id="historyList">
+      <!-- History items will be inserted here -->
+    </div>
+  </div>
+  
+  <!-- History Detail Screen -->
+  <div class="history-detail" id="historyDetailScreen">
+    <div class="history-header">
+      <div class="history-back-btn" id="historyDetailBackBtn">←</div>
+      <div class="history-title">Search Details</div>
+    </div>
+    <div class="history-detail-content" id="historyDetailContent">
+      <!-- Detail content will be inserted here -->
+    </div>
   </div>
   
   <script src="popup.js"></script>
