@@ -24,6 +24,10 @@ function loadSettings() {
     // ollamaModel will be loaded from the models list
     if (data.apiProvider) {
       document.getElementById('apiProvider').value = data.apiProvider;
+      
+      // Load API key for this provider
+      loadAPIKeyForProvider(data.apiProvider);
+      
       // Load saved model
       setTimeout(() => {
         updateModelDropdown(data.apiProvider, data.apiModel);
@@ -46,12 +50,27 @@ function loadSettings() {
         }
       }, 100);
     }
-    if (data.apiKey) document.getElementById('apiKey').value = data.apiKey;
   });
 }
 
 // Back button
 document.getElementById('backBtn').addEventListener('click', () => {
+  const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
+  
+  // If AI mode with failed API, switch to Simple mode before going back
+  if (searchMode === 'ai' && selectedAIProvider === 'api') {
+    const verificationStatus = getAPIVerificationStatus();
+    
+    if (verificationStatus === 'failed') {
+      // Switch to Simple mode and then navigate
+      chrome.storage.local.set({ searchMode: 'simple' }, () => {
+        window.location.href = 'popup.html';
+      });
+      return;
+    }
+  }
+  
+  // Normal navigation
   window.location.href = 'popup.html';
 });
 
@@ -73,6 +92,29 @@ document.querySelectorAll('input[name="searchMode"]').forEach((radio) => {
 
 // Track selected AI provider (Ollama or API)
 let selectedAIProvider = null;
+
+// Helper function to get API verification status
+function getAPIVerificationStatus() {
+  const statusDiv = document.getElementById('apiVerificationStatus');
+  
+  if (!statusDiv || statusDiv.style.display === 'none') {
+    return 'hidden';
+  }
+  
+  if (statusDiv.classList.contains('verified')) {
+    return 'verified';
+  }
+  
+  if (statusDiv.classList.contains('failed')) {
+    return 'failed';
+  }
+  
+  if (statusDiv.classList.contains('checking')) {
+    return 'checking';
+  }
+  
+  return 'unknown';
+}
 
 // Collapsible functionality
 document.querySelectorAll('.collapsible-header').forEach((header) => {
@@ -105,8 +147,62 @@ document.querySelectorAll('.collapsible-header').forEach((header) => {
 
 // Save settings
 document.getElementById('saveBtn').addEventListener('click', () => {
-  const searchMode = document.querySelector('input[name="searchMode"]:checked').value;
+  let searchMode = document.querySelector('input[name="searchMode"]:checked').value;
   const simpleSearchType = document.querySelector('input[name="simpleSearchType"]:checked').value;
+  const saveStatus = document.getElementById('saveStatus');
+  
+  // Check if AI mode with API provider has issues
+  if (searchMode === 'ai' && selectedAIProvider === 'api') {
+    const apiKey = document.getElementById('apiKey').value.trim();
+    const apiProvider = document.getElementById('apiProvider').value;
+    const verificationStatus = getAPIVerificationStatus();
+    
+    // Block if no API key provided
+    if (!apiKey || !apiProvider) {
+      showErrorModal('Missing API Key', 'Cannot save settings. Please enter an API key for the selected provider.');
+      return; // Do not save, do not navigate
+    }
+    
+    // Block if verification explicitly failed
+    if (verificationStatus === 'failed') {
+      showErrorModal('API Configuration Failed', 'Cannot save settings because the API configuration failed. Please check your API key and try again.');
+      return; // Do not save, do not navigate
+    }
+  }
+  
+  // Check if AI mode has errors (no provider selected)
+  if (searchMode === 'ai') {
+    let hasError = false;
+    let errorMessage = '';
+    
+    if (selectedAIProvider === null) {
+      // No provider selected
+      hasError = true;
+      errorMessage = 'No AI provider selected. Switching to Simple Search.';
+    }
+    
+    if (hasError) {
+      // Show warning and switch to Simple
+      saveStatus.className = 'error';
+      saveStatus.style.background = '#fff5f5';
+      saveStatus.style.color = '#e53e3e';
+      saveStatus.style.borderLeft = '3px solid #e53e3e';
+      saveStatus.style.padding = '10px';
+      saveStatus.style.borderRadius = '6px';
+      saveStatus.textContent = `⚠️ ${errorMessage}`;
+      
+      // Switch to Simple mode
+      searchMode = 'simple';
+      document.getElementById('simpleMode').checked = true;
+      
+      setTimeout(() => {
+        saveStatus.textContent = '';
+        saveStatus.style.background = '';
+        saveStatus.style.color = '';
+        saveStatus.style.borderLeft = '';
+      }, 3000);
+    }
+  }
   
   const settings = {
     searchMode: searchMode,
@@ -124,8 +220,15 @@ document.getElementById('saveBtn').addEventListener('click', () => {
       settings.apiModel = '';
     } else if (selectedAIProvider === 'api') {
       // Save API settings, clear Ollama
-      settings.apiProvider = document.getElementById('apiProvider').value;
-      settings.apiKey = document.getElementById('apiKey').value.trim();
+      const provider = document.getElementById('apiProvider').value;
+      const apiKey = document.getElementById('apiKey').value.trim();
+      
+      settings.apiProvider = provider;
+      
+      // Save API key for this provider
+      if (provider && apiKey) {
+        saveAPIKeyForProvider(provider, apiKey);
+      }
       
       // Get model - either from dropdown or custom input
       const modelSelect = document.getElementById('apiModelSelect').value;
@@ -145,9 +248,14 @@ document.getElementById('saveBtn').addEventListener('click', () => {
   }
 
   chrome.storage.local.set(settings, () => {
-    const saveStatus = document.getElementById('saveStatus');
-    saveStatus.className = 'success';
-    saveStatus.textContent = '✓ Settings saved successfully!';
+    if (searchMode === 'simple' && document.querySelector('input[name="searchMode"]:checked').value === 'ai') {
+      // Was switched to simple due to error
+      saveStatus.className = 'success';
+      saveStatus.textContent = '✓ Saved - Using Simple Search (AI had errors)';
+    } else {
+      saveStatus.className = 'success';
+      saveStatus.textContent = '✓ Settings saved successfully!';
+    }
     
     setTimeout(() => {
       window.location.href = 'popup.html';
@@ -313,6 +421,9 @@ document.getElementById('apiProvider').addEventListener('change', (e) => {
   modelCustom.style.display = 'none';
   modelCustom.value = '';
   
+  // Load API key for this provider
+  loadAPIKeyForProvider(provider);
+  
   if (provider && providerModels[provider]) {
     // Update dropdown with default + custom models
     updateModelDropdown(provider);
@@ -392,6 +503,13 @@ async function checkAPIVerification() {
     statusIcon.textContent = '⏳';
     statusText.textContent = 'Verifying...';
     
+    // Set timeout for verification
+    const verificationTimeout = setTimeout(() => {
+      statusDiv.className = 'api-verification-status failed';
+      statusIcon.textContent = '❌';
+      statusText.textContent = 'Verification timeout - Check your API key';
+    }, 15000); // 15 second timeout
+    
     // Send verification request to background
     chrome.runtime.sendMessage(
       {
@@ -401,6 +519,22 @@ async function checkAPIVerification() {
         model: model
       },
       (response) => {
+        clearTimeout(verificationTimeout);
+        
+        if (chrome.runtime.lastError) {
+          statusDiv.className = 'api-verification-status failed';
+          statusIcon.textContent = '❌';
+          statusText.textContent = `Error: ${chrome.runtime.lastError.message}`;
+          return;
+        }
+        
+        if (!response) {
+          statusDiv.className = 'api-verification-status failed';
+          statusIcon.textContent = '❌';
+          statusText.textContent = 'No response from background script';
+          return;
+        }
+        
         if (response.success) {
           statusDiv.className = 'api-verification-status verified';
           statusIcon.textContent = '✅';
@@ -416,10 +550,9 @@ async function checkAPIVerification() {
         } else {
           statusDiv.className = 'api-verification-status failed';
           statusIcon.textContent = '❌';
-          statusText.textContent = `Failed: ${response.error}`;
+          statusText.textContent = `Failed: ${response.error || 'Unknown error'}`;
           
-          // Save failure (but allow retry later)
-          chrome.storage.local.set({ [verificationKey]: 'failed' });
+          // Don't save failure - allow retry
         }
       }
     );
@@ -511,9 +644,61 @@ function updateModelDropdown(provider, selectModel = null) {
   });
 }
 
+// Toggle API Key visibility
+document.getElementById('toggleApiKeyBtn').addEventListener('click', () => {
+  const apiKeyInput = document.getElementById('apiKey');
+  const toggleBtn = document.getElementById('toggleApiKeyBtn');
+  const eyeIcon = toggleBtn.querySelector('.eye-icon');
+  const eyeOffIcon = toggleBtn.querySelector('.eye-off-icon');
+  
+  if (apiKeyInput.type === 'password') {
+    apiKeyInput.type = 'text';
+    eyeIcon.style.display = 'none';
+    eyeOffIcon.style.display = 'block';
+    toggleBtn.title = 'Hide password';
+  } else {
+    apiKeyInput.type = 'password';
+    eyeIcon.style.display = 'block';
+    eyeOffIcon.style.display = 'none';
+    toggleBtn.title = 'Show password';
+  }
+});
+
+// Load API key for selected provider
+function loadAPIKeyForProvider(provider) {
+  if (!provider) {
+    document.getElementById('apiKey').value = '';
+    return;
+  }
+  
+  chrome.storage.local.get(['apiKeys'], (data) => {
+    const apiKeys = data.apiKeys || {};
+    document.getElementById('apiKey').value = apiKeys[provider] || '';
+  });
+}
+
+// Save API key for current provider
+function saveAPIKeyForProvider(provider, apiKey) {
+  if (!provider) return;
+  
+  chrome.storage.local.get(['apiKeys'], (data) => {
+    const apiKeys = data.apiKeys || {};
+    apiKeys[provider] = apiKey;
+    chrome.storage.local.set({ apiKeys });
+  });
+}
+
 // Check verification when API key changes (with debounce)
 let apiKeyTimeout;
 document.getElementById('apiKey').addEventListener('input', () => {
+  const provider = document.getElementById('apiProvider').value;
+  const apiKey = document.getElementById('apiKey').value.trim();
+  
+  // Save API key for this provider
+  if (provider && apiKey) {
+    saveAPIKeyForProvider(provider, apiKey);
+  }
+  
   clearTimeout(apiKeyTimeout);
   apiKeyTimeout = setTimeout(() => {
     checkAPIVerification();
@@ -895,3 +1080,42 @@ setTimeout(() => {
     }
   });
 }, 500);
+
+// Error Modal Functions
+function showErrorModal(title, message) {
+  const modal = document.getElementById('errorModal');
+  const modalTitle = document.getElementById('errorModalTitle');
+  const modalBody = document.getElementById('errorModalBody');
+  
+  modalTitle.textContent = title;
+  modalBody.textContent = message;
+  
+  modal.classList.add('active');
+}
+
+function closeErrorModal() {
+  const modal = document.getElementById('errorModal');
+  modal.classList.remove('active');
+}
+
+// Error Modal Event Listeners
+document.getElementById('errorModalOkBtn').addEventListener('click', closeErrorModal);
+
+// Close error modal on overlay click
+document.getElementById('errorModal').addEventListener('click', (e) => {
+  if (e.target.id === 'errorModal') {
+    closeErrorModal();
+  }
+});
+
+// Info Modal Event Listeners (if not already defined)
+document.getElementById('modalOkBtn')?.addEventListener('click', () => {
+  document.getElementById('infoModal').classList.remove('active');
+});
+
+// Close info modal on overlay click
+document.getElementById('infoModal')?.addEventListener('click', (e) => {
+  if (e.target.id === 'infoModal') {
+    document.getElementById('infoModal').classList.remove('active');
+  }
+});

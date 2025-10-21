@@ -128,8 +128,14 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
       statusDiv.textContent = "Searching with AI...";
 
       chrome.storage.local.get(
-        ["ollamaUrl", "ollamaModel", "apiProvider", "apiKey", "apiModel"],
+        ["ollamaUrl", "ollamaModel", "apiProvider", "apiKeys", "apiModel"],
         (settings) => {
+          // Get API key for the selected provider
+          const apiKey =
+            settings.apiKeys && settings.apiKeys[settings.apiProvider]
+              ? settings.apiKeys[settings.apiProvider]
+              : "";
+          settings.apiKey = apiKey;
           const hasOllama = settings.ollamaUrl || settings.ollamaModel;
           const hasApi = settings.apiProvider && settings.apiKey;
 

@@ -205,6 +205,39 @@
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
     
+    .api-key-wrapper {
+      position: relative;
+      width: 100%;
+    }
+    
+    .api-key-wrapper input {
+      padding-right: 40px;
+    }
+    
+    .toggle-password-btn {
+      position: absolute;
+      right: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      transition: color 0.2s ease;
+    }
+    
+    .toggle-password-btn:hover {
+      color: #667eea;
+    }
+    
+    .toggle-password-btn:focus {
+      outline: none;
+    }
+    
     .save-btn {
       width: 100%;
       padding: 12px;
@@ -324,12 +357,22 @@
       z-index: 1000;
       align-items: center;
       justify-content: center;
+      opacity: 0;
+      transition: opacity 0.3s ease;
     }
-    
-
     
     .modal-overlay.active {
       display: flex;
+      animation: fadeIn 0.3s ease forwards;
+    }
+    
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
     }
     
     .modal-content {
@@ -342,6 +385,18 @@
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
       display: flex;
       flex-direction: column;
+      animation: slideUp 0.3s ease;
+    }
+    
+    @keyframes slideUp {
+      from {
+        transform: translateY(20px);
+        opacity: 0;
+      }
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
     }
     
     .modal-title {
@@ -408,6 +463,12 @@
     
     .modal-ok-btn:hover {
       background: #5568d3;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .modal-ok-btn:active {
+      transform: translateY(0);
     }
     
     .status-indicator {
@@ -707,7 +768,19 @@
               <option value="novita">Novita AI</option>
             </optgroup>
           </select>
-          <input type="password" id="apiKey" placeholder="API Key">
+          <div class="api-key-wrapper">
+            <input type="password" id="apiKey" placeholder="API Key">
+            <button type="button" id="toggleApiKeyBtn" class="toggle-password-btn" title="Show password">
+              <svg class="eye-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg class="eye-off-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+            </button>
+          </div>
           <select id="apiModelSelect">
             <option value="">Select model...</option>
           </select>
@@ -733,6 +806,17 @@
       <div class="modal-title" id="modalTitle">ℹ️ Setup Instructions</div>
       <div class="modal-body" id="modalBody"></div>
       <button class="modal-ok-btn" id="modalOkBtn">OK</button>
+    </div>
+  </div>
+  
+  <div class="modal-overlay" id="errorModal">
+    <div class="modal-content">
+      <div class="modal-title" style="color: #e53e3e;">
+        <span style="font-size: 20px;">⚠️</span>
+        <span id="errorModalTitle">Error</span>
+      </div>
+      <div class="modal-body" id="errorModalBody" style="color: #333;"></div>
+      <button class="modal-ok-btn" id="errorModalOkBtn" style="background: #e53e3e;">OK</button>
     </div>
   </div>
   

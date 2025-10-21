@@ -506,6 +506,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
     (async () => {
       try {
+        if (!provider || !apiKey || !model) {
+          sendResponse({ success: false, error: 'Missing provider, API key, or model' });
+          return;
+        }
+        
         const simplePrompt = "Answer only yes or no: Is this working?";
         let apiUrl, headers, body;
         
@@ -583,10 +588,22 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           sendResponse({ success: true });
         } else {
           const errorText = await response.text();
-          sendResponse({ success: false, error: `HTTP ${response.status}` });
+          let errorMsg = `HTTP ${response.status}`;
+          
+          // Try to parse error message
+          try {
+            const errorData = JSON.parse(errorText);
+            if (errorData.error && errorData.error.message) {
+              errorMsg = errorData.error.message.substring(0, 100);
+            }
+          } catch (e) {
+            // Keep default error message
+          }
+          
+          sendResponse({ success: false, error: errorMsg });
         }
       } catch (error) {
-        sendResponse({ success: false, error: error.message });
+        sendResponse({ success: false, error: error.message || 'Network error' });
       }
     })();
     
