@@ -1332,7 +1332,12 @@ function protectPlaceholders(editorArea) {
   // Prevent deletion of placeholder buttons
   editorArea.addEventListener("keydown", (e) => {
     // Allow normal editing
-    if (!e.key || e.key.length > 1 && e.key !== "Backspace" && e.key !== "Delete") {
+    if (!e.key || (e.key.length > 1 && e.key !== "Backspace" && e.key !== "Delete")) {
+      return;
+    }
+
+    // Only handle Backspace and Delete
+    if (e.key !== "Backspace" && e.key !== "Delete") {
       return;
     }
 
@@ -1351,25 +1356,31 @@ function protectPlaceholders(editorArea) {
       }
     });
 
-    // If trying to delete and selection includes placeholder, prevent it
-    if (hasPlaceholder && (e.key === "Backspace" || e.key === "Delete")) {
+    // If selection includes placeholder, delete everything except placeholders
+    if (hasPlaceholder) {
       e.preventDefault();
       e.stopPropagation();
       
-      // Show a brief message
-      const existingMsg = editorArea.querySelector(".protection-message");
-      if (!existingMsg) {
-        const msg = document.createElement("div");
-        msg.className = "protection-message";
-        msg.textContent = "⚠️ Cannot delete placeholder buttons";
-        msg.style.cssText = "position: absolute; top: 10px; right: 10px; background: #fff3cd; padding: 8px 12px; border-radius: 6px; font-size: 12px; border-left: 3px solid #ffc107; z-index: 1000;";
-        editorArea.style.position = "relative";
-        editorArea.appendChild(msg);
-        
-        setTimeout(() => {
-          msg.remove();
-        }, 2000);
-      }
+      // Get all content
+      const contents = Array.from(editorArea.childNodes);
+      
+      // Remove all text nodes and non-placeholder elements
+      contents.forEach((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+          // Check if this text node is in the selection
+          if (range.intersectsNode(node)) {
+            node.remove();
+          }
+        } else if (!node.classList || !node.classList.contains("search-placeholder")) {
+          // Remove non-placeholder elements if in selection
+          if (range.intersectsNode(node)) {
+            node.remove();
+          }
+        }
+      });
+      
+      // Clear selection
+      selection.removeAllRanges();
     }
   });
 }
