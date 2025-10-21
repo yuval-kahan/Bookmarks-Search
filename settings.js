@@ -1421,3 +1421,70 @@ document.getElementById("promptEditorArea").addEventListener("keydown", (e) => {
     }
   }
 });
+
+// Bookmark Fields Editor Functions
+function openFieldsEditor() {
+  const mainContainer = document.querySelector(".container");
+  const fieldsScreen = document.getElementById("fieldsEditorScreen");
+
+  // Hide main settings
+  mainContainer.style.display = "none";
+  fieldsScreen.style.display = "block";
+
+  // Load saved field settings
+  loadFieldSettings();
+}
+
+function closeFieldsEditor() {
+  const mainContainer = document.querySelector(".container");
+  const fieldsScreen = document.getElementById("fieldsEditorScreen");
+
+  // Show main settings
+  mainContainer.style.display = "block";
+  fieldsScreen.style.display = "none";
+}
+
+function loadFieldSettings() {
+  chrome.storage.local.get(['bookmarkFields'], (data) => {
+    const fields = data.bookmarkFields || {
+      includeTitle: true,
+      includeUrl: true,
+      includeFolder: true
+    };
+    
+    document.getElementById('includeTitle').checked = fields.includeTitle;
+    document.getElementById('includeUrl').checked = fields.includeUrl;
+    document.getElementById('includeFolder').checked = fields.includeFolder;
+  });
+}
+
+function saveFieldSettings() {
+  const fields = {
+    includeTitle: document.getElementById('includeTitle').checked,
+    includeUrl: document.getElementById('includeUrl').checked,
+    includeFolder: document.getElementById('includeFolder').checked
+  };
+  
+  chrome.storage.local.set({ bookmarkFields: fields }, () => {
+    // Show success message
+    const saveBtn = document.getElementById('fieldsSaveBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = '✓ Saved!';
+    saveBtn.style.background = '#48bb78';
+    
+    setTimeout(() => {
+      saveBtn.textContent = originalText;
+      saveBtn.style.background = '';
+      closeFieldsEditor();
+    }, 1000);
+  });
+}
+
+// Fields button event listener
+document.getElementById('fieldsBtn').addEventListener('click', openFieldsEditor);
+
+// Fields back button
+document.getElementById('fieldsBackBtn').addEventListener('click', closeFieldsEditor);
+
+// Fields save button
+document.getElementById('fieldsSaveBtn').addEventListener('click', saveFieldSettings);

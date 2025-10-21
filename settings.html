@@ -935,6 +935,7 @@
     
     <button class="save-btn" id="saveBtn">💾 Save Settings</button>
     <button class="prompt-btn" id="promptBtn">📝 Edit Prompt</button>
+    <button class="prompt-btn" id="fieldsBtn">📋 Bookmark Fields</button>
     <div id="saveStatus"></div>
     
     <div class="info-box">
@@ -978,6 +979,65 @@
       </div>
       <div class="modal-body" id="errorModalBody" style="color: #333;"></div>
       <button class="modal-ok-btn" id="errorModalOkBtn" style="background: #e53e3e;">OK</button>
+    </div>
+  </div>
+  
+  <!-- Bookmark Fields Screen -->
+  <div class="prompt-editor-screen" id="fieldsEditorScreen" style="display: none;">
+    <div class="prompt-editor-header">
+      <div class="back-icon" id="fieldsBackBtn" title="Back">←</div>
+      <h1>📋 Bookmark Fields</h1>
+      <div style="width: 29px;"></div>
+    </div>
+    
+    <div class="prompt-editor-content">
+      <div style="background: #f0f4ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #667eea;">
+        <strong>Choose which information to send to AI:</strong><br>
+        <span style="font-size: 12px; color: #666;">Sending less data = faster AI response, but may reduce accuracy</span>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 15px;">
+        <label style="display: flex; align-items: flex-start; padding: 15px; background: white; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+          <input type="checkbox" id="includeTitle" checked style="width: 20px; height: 20px; margin-right: 12px; margin-top: 2px; cursor: pointer; accent-color: #667eea;">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px; color: #333; margin-bottom: 4px;">✏️ Title (Bookmark name)</div>
+            <div style="font-size: 12px; color: #666; margin-bottom: 6px;">The name you gave to the bookmark</div>
+            <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 11px; font-family: monospace; color: #667eea;">
+              Example: "Pizza Recipe"
+            </div>
+          </div>
+        </label>
+        
+        <label style="display: flex; align-items: flex-start; padding: 15px; background: white; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+          <input type="checkbox" id="includeUrl" checked style="width: 20px; height: 20px; margin-right: 12px; margin-top: 2px; cursor: pointer; accent-color: #667eea;">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px; color: #333; margin-bottom: 4px;">🔗 URL (Full link)</div>
+            <div style="font-size: 12px; color: #666; margin-bottom: 6px;">The complete web address</div>
+            <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 11px; font-family: monospace; color: #667eea;">
+              Example: "https://www.pizzahut.com/recipes"
+            </div>
+          </div>
+        </label>
+        
+        <label style="display: flex; align-items: flex-start; padding: 15px; background: white; border: 2px solid #e0e0e0; border-radius: 8px; cursor: pointer; transition: all 0.3s ease;">
+          <input type="checkbox" id="includeFolder" checked style="width: 20px; height: 20px; margin-right: 12px; margin-top: 2px; cursor: pointer; accent-color: #667eea;">
+          <div style="flex: 1;">
+            <div style="font-weight: 600; font-size: 14px; color: #333; margin-bottom: 4px;">📁 Folder (Location in browser)</div>
+            <div style="font-size: 12px; color: #666; margin-bottom: 6px;">Where the bookmark is organized</div>
+            <div style="background: #f8f9fa; padding: 8px; border-radius: 4px; font-size: 11px; font-family: monospace; color: #667eea;">
+              Example: "Food > Recipes"
+            </div>
+          </div>
+        </label>
+      </div>
+      
+      <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-top: 20px; border-left: 3px solid #ffc107; font-size: 12px;">
+        💡 <strong>Tip:</strong> Keep all fields enabled for best results. Disable fields only if you have privacy concerns or want faster responses.
+      </div>
+      
+      <div class="prompt-editor-buttons" style="margin-top: 20px;">
+        <button class="prompt-save-btn" id="fieldsSaveBtn">💾 Save Fields</button>
+      </div>
     </div>
   </div>
   

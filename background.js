@@ -45,14 +45,45 @@ async function getAllBookmarks() {
   });
 }
 
+// Helper function to format bookmark list based on field settings
+async function formatBookmarkList(bookmarks) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['bookmarkFields'], (data) => {
+      const fields = data.bookmarkFields || {
+        includeTitle: true,
+        includeUrl: true,
+        includeFolder: true
+      };
+      
+      const formattedList = bookmarks.map((b, i) => {
+        let parts = [`${i + 1}.`];
+        
+        if (fields.includeTitle) {
+          parts.push(b.title);
+        }
+        
+        if (fields.includeUrl) {
+          parts.push(fields.includeTitle ? `- ${b.url}` : b.url);
+        }
+        
+        if (fields.includeFolder && b.path) {
+          parts.push(`(Folder: ${b.path})`);
+        }
+        
+        return parts.join(' ');
+      }).join("\n");
+      
+      resolve(formattedList);
+    });
+  });
+}
+
 // AI search using Ollama
 async function aiSearchWithOllama(query, ollamaUrl, ollamaModel, customPrompt, usePrompt) {
   const allBookmarks = await getAllBookmarks();
 
-  // Always include bookmarks list
-  const bookmarkList = allBookmarks
-    .map((b, i) => `${i + 1}. ${b.title} - ${b.url} (Folder: ${b.path})`)
-    .join("\n");
+  // Always include bookmarks list with selected fields
+  const bookmarkList = await formatBookmarkList(allBookmarks);
 
   let prompt;
   
@@ -121,10 +152,8 @@ Your response:`;
 async function aiSearchWithAPI(query, provider, apiKey, model, customPrompt, usePrompt) {
   const allBookmarks = await getAllBookmarks();
 
-  // Always include bookmarks list
-  const bookmarkList = allBookmarks
-    .map((b, i) => `${i + 1}. ${b.title} - ${b.url} (Folder: ${b.path})`)
-    .join("\n");
+  // Always include bookmarks list with selected fields
+  const bookmarkList = await formatBookmarkList(allBookmarks);
 
   let userPrompt;
   
