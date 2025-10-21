@@ -177,12 +177,18 @@
       border-radius: 6px;
       transition: all 0.2s ease;
       border-left: 3px solid transparent;
+      opacity: 1;
     }
     
     #results li:hover {
       background: #f0f0ff;
       border-left-color: #667eea;
       transform: translateX(3px);
+    }
+    
+    #results li.fade-out {
+      opacity: 0;
+      transition: opacity 0.5s ease;
     }
     
     #results a {

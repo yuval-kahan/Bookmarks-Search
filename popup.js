@@ -299,9 +299,16 @@ document.getElementById("stopBtn").addEventListener("click", () => {
     errorDiv.textContent = "";
     list.innerHTML = "<li style='color: #e53e3e;'>⏹ Search cancelled</li>";
     
-    // Clear the cancelled message after 3 seconds
+    // Fade out and clear the cancelled message after 2.5 seconds
     setTimeout(() => {
-      list.innerHTML = "";
-    }, 3000);
+      const cancelledItem = list.querySelector("li");
+      if (cancelledItem) {
+        cancelledItem.classList.add("fade-out");
+        // Remove after fade animation completes
+        setTimeout(() => {
+          list.innerHTML = "";
+        }, 500);
+      }
+    }, 2500);
   }
 });
