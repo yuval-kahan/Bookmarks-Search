@@ -162,6 +162,31 @@
     #results a:hover {
       color: #667eea;
     }
+    
+    .search-mode-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 12px;
+      border-left: 3px solid #667eea;
+    }
+    
+    .mode-icon {
+      font-size: 14px;
+    }
+    
+    .mode-text {
+      font-weight: 500;
+      color: #555;
+    }
+    
+    .mode-text strong {
+      color: #667eea;
+    }
   </style>
 </head>
 <body>
@@ -169,6 +194,11 @@
     <div class="header">
       <h1>🔍 Search Bookmarks</h1>
       <div class="settings-icon" id="settingsBtn" title="Settings">⚙️</div>
+    </div>
+    
+    <div class="search-mode-indicator" id="searchModeIndicator">
+      <span class="mode-icon">⚡</span>
+      <span class="mode-text">Loading...</span>
     </div>
     
     <div class="search-box">

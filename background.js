@@ -484,6 +484,103 @@ async function exactMatchSearch(query) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "testOllamaCors") {
+    const { ollamaUrl, ollamaModel } = request;
+    
+    (async () => {
+      try {
+        // Quick CORS test with short timeout
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch(`${ollamaUrl}/api/generate`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Origin': 'chrome-extension://' + chrome.runtime.id
+          },
+          mode: 'cors',
+          body: JSON.stringify({
+            model: ollamaModel,
+            prompt: 'test',
+            stream: false,
+            options: {
+              num_predict: 1
+            }
+          }),
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
+        
+        if (response.ok || response.status === 200) {
+          sendResponse({ success: true });
+        } else if (response.status === 403) {
+          sendResponse({ success: false });
+        } else {
+          sendResponse({ success: false });
+        }
+      } catch (error) {
+        sendResponse({ success: false });
+      }
+    })();
+    
+    return true;
+  }
+  
+  if (request.action === "testOllama") {
+    const { ollamaUrl, ollamaModel } = request;
+    
+    (async () => {
+      try {
+        const response = await fetch(`${ollamaUrl}/api/generate`, {
+          method: 'POST',
+          headers: { 
+            'Content-Type': 'application/json',
+            'Origin': 'chrome-extension://' + chrome.runtime.id
+          },
+          mode: 'cors',
+          body: JSON.stringify({
+            model: ollamaModel,
+            prompt: 'Say only: OK',
+            stream: false,
+            options: {
+              num_predict: 10
+            }
+          })
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.response) {
+            sendResponse({ success: true });
+          } else {
+            sendResponse({ success: false, error: 'No response from model' });
+          }
+        } else if (response.status === 403) {
+          sendResponse({ 
+            success: false, 
+            error: 'CORS blocked. Please set OLLAMA_ORIGINS environment variable.\n\nWindows: setx OLLAMA_ORIGINS "*"\nThen restart Ollama service.' 
+          });
+        } else {
+          const errorText = await response.text();
+          sendResponse({ success: false, error: `HTTP ${response.status}: ${errorText}` });
+        }
+      } catch (error) {
+        if (error.message.includes('Failed to fetch') || error.message.includes('CORS')) {
+          sendResponse({ 
+            success: false, 
+            error: 'CORS blocked. Set OLLAMA_ORIGINS=* environment variable and restart Ollama.' 
+          });
+        } else {
+          sendResponse({ success: false, error: error.message });
+        }
+      }
+    })();
+    
+    return true;
+  }
+  
   if (request.action === "searchBookmarks") {
     const query = request.query;
     const searchType = request.searchType || "exact";

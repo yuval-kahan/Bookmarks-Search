@@ -1,7 +1,80 @@
+// Load and display current search mode
+function updateSearchModeIndicator() {
+  chrome.storage.local.get(
+    ["searchMode", "simpleSearchType", "ollamaModel", "apiProvider"],
+    (data) => {
+      const indicator = document.getElementById("searchModeIndicator");
+      const modeIcon = indicator.querySelector(".mode-icon");
+      const modeText = indicator.querySelector(".mode-text");
+
+      const searchMode = data.searchMode || "simple";
+
+      if (searchMode === "simple") {
+        const searchType = data.simpleSearchType || "exact";
+
+        if (searchType === "exact") {
+          modeIcon.textContent = "🎯";
+          modeText.innerHTML = "Mode: <strong>Simple - Exact Match</strong>";
+        } else {
+          modeIcon.textContent = "🔍";
+          modeText.innerHTML = "Mode: <strong>Simple - Fuzzy Search</strong>";
+        }
+      } else {
+        // AI Search mode
+        const ollamaModel = data.ollamaModel;
+        const apiProvider = data.apiProvider;
+
+        if (apiProvider) {
+          modeIcon.textContent = "🌐";
+          modeText.innerHTML = `Mode: <strong>AI - ${getProviderName(
+            apiProvider
+          )}</strong>`;
+        } else if (ollamaModel) {
+          modeIcon.textContent = "🦙";
+          modeText.innerHTML = `Mode: <strong>AI - Ollama (${ollamaModel})</strong>`;
+        } else {
+          modeIcon.textContent = "🤖";
+          modeText.innerHTML =
+            "Mode: <strong>AI Search</strong> (not configured)";
+        }
+      }
+    }
+  );
+}
+
+// Get provider display name
+function getProviderName(provider) {
+  const names = {
+    openai: "OpenAI",
+    anthropic: "Anthropic",
+    google: "Google Gemini",
+    xai: "xAI",
+    groq: "Groq",
+    together: "Together AI",
+    fireworks: "Fireworks AI",
+    deepseek: "DeepSeek",
+    perplexity: "Perplexity",
+    cohere: "Cohere",
+    mistral: "Mistral AI",
+    ai21: "AI21 Labs",
+    huggingface: "Hugging Face",
+    anyscale: "Anyscale",
+    azure: "Azure OpenAI",
+    cloudflare: "Cloudflare",
+    lepton: "Lepton AI",
+    openrouter: "OpenRouter",
+    novita: "Novita AI",
+  };
+  return names[provider] || provider;
+}
+
 // Open settings page
 document.getElementById("settingsBtn").addEventListener("click", () => {
   window.location.href = "settings.html";
 });
+
+// Update indicator on load
+updateSearchModeIndicator();
 
 // Search functionality
 document.getElementById("searchBtn").addEventListener("click", async () => {

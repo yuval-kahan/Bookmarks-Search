@@ -54,9 +54,18 @@ document.querySelectorAll('.collapsible-header').forEach((header) => {
   header.addEventListener('click', () => {
     const targetId = header.getAttribute('data-target');
     const content = document.getElementById(targetId);
+    const parentCollapsible = header.parentElement;
 
+    // Toggle active state
     header.classList.toggle('active');
     content.classList.toggle('active');
+    
+    // Toggle selected state on parent
+    if (content.classList.contains('active')) {
+      parentCollapsible.classList.add('selected');
+    } else {
+      parentCollapsible.classList.remove('selected');
+    }
   });
 });
 
@@ -232,6 +241,47 @@ function formatSize(bytes) {
   return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
 }
 
+// Check Ollama CORS configuration
+async function checkOllamaCors() {
+  const corsStatusDiv = document.getElementById('ollamaCorsStatus');
+  const corsStatusText = corsStatusDiv.querySelector('.status-text');
+  const setupWarning = document.getElementById('ollamaSetupWarning');
+  const ollamaUrl = document.getElementById('ollamaUrl').value.trim() || 'http://localhost:11434';
+  const ollamaModel = document.getElementById('ollamaModel').value;
+  
+  if (!ollamaModel) {
+    corsStatusDiv.style.display = 'none';
+    setupWarning.style.display = 'block';
+    return;
+  }
+  
+  corsStatusDiv.style.display = 'flex';
+  corsStatusDiv.className = 'status-indicator checking';
+  corsStatusText.textContent = 'Checking CORS...';
+  
+  // Send quick test to background
+  chrome.runtime.sendMessage(
+    {
+      action: 'testOllamaCors',
+      ollamaUrl: ollamaUrl,
+      ollamaModel: ollamaModel
+    },
+    (response) => {
+      if (response.success) {
+        corsStatusDiv.className = 'status-indicator active';
+        corsStatusText.textContent = '✓ CORS configured - Ready to use';
+        // Hide setup warning if CORS is working
+        setupWarning.style.display = 'none';
+      } else {
+        corsStatusDiv.className = 'status-indicator inactive';
+        corsStatusText.textContent = '✗ First init needed - Run setup command above';
+        // Show setup warning if CORS is not working
+        setupWarning.style.display = 'block';
+      }
+    }
+  );
+}
+
 // Check Ollama status
 async function checkOllamaStatus() {
   const statusDiv = document.getElementById('ollamaStatus');
@@ -259,12 +309,18 @@ async function checkOllamaStatus() {
         if (modelExists) {
           statusDiv.className = 'status-indicator active';
           statusText.textContent = `✓ Active - ${data.models.length} model(s) available`;
+          
+          // Check CORS after confirming Ollama is active
+          checkOllamaCors();
         } else if (modelName) {
           statusDiv.className = 'status-indicator inactive';
           statusText.textContent = `⚠ Model "${modelName}" not found`;
         } else {
           statusDiv.className = 'status-indicator active';
           statusText.textContent = `✓ Active - ${data.models.length} model(s) available`;
+          
+          // Check CORS
+          checkOllamaCors();
         }
       } else {
         statusDiv.className = 'status-indicator inactive';
@@ -310,34 +366,20 @@ document.getElementById('testOllamaBtn').addEventListener('click', async () => {
   btn.disabled = true;
   btn.textContent = '🔄 Testing...';
   
-  try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-    
-    const response = await fetch(`${ollamaUrl}/api/generate`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: ollamaModel,
-        prompt: 'Say only: OK',
-        stream: false,
-        options: {
-          num_predict: 10
-        }
-      }),
-      signal: controller.signal
-    });
-    
-    clearTimeout(timeoutId);
-    
-    if (response.ok) {
-      const data = await response.json();
-      if (data.response) {
+  // Send test request to background script
+  chrome.runtime.sendMessage(
+    {
+      action: 'testOllama',
+      ollamaUrl: ollamaUrl,
+      ollamaModel: ollamaModel
+    },
+    (response) => {
+      if (response.success) {
         btn.textContent = '✓ Test Successful!';
         btn.style.background = '#48bb78';
         
         // Update status
-        await checkOllamaStatus();
+        checkOllamaStatus();
         
         setTimeout(() => {
           btn.textContent = '🧪 Test Connection';
@@ -345,36 +387,37 @@ document.getElementById('testOllamaBtn').addEventListener('click', async () => {
           btn.disabled = false;
         }, 2000);
       } else {
-        throw new Error('No response from model');
+        btn.textContent = '✗ Test Failed';
+        btn.style.background = '#e53e3e';
+        
+        setTimeout(() => {
+          btn.textContent = '🧪 Test Connection';
+          btn.style.background = '#667eea';
+          btn.disabled = false;
+        }, 2000);
+        
+        let errorMessage = `<strong>Error:</strong> ${response.error}<br><br>`;
+        
+        if (response.error.includes('CORS')) {
+          errorMessage += `<strong>🔧 Fix CORS Issue:</strong><br><br>
+          <strong>Windows (CMD as Administrator):</strong><br>
+          <code>setx OLLAMA_ORIGINS "*"</code><br><br>
+          <strong>Windows (PowerShell as Administrator):</strong><br>
+          <code>[System.Environment]::SetEnvironmentVariable('OLLAMA_ORIGINS', '*', 'Machine')</code><br><br>
+          <strong>Then restart Ollama:</strong><br>
+          1. Close Ollama completely<br>
+          2. Run <code>ollama serve</code> again<br><br>
+          <strong>Or use AI Search instead</strong> - it works without CORS issues!`;
+        } else {
+          errorMessage += `<strong>Make sure:</strong><br>
+          1. Ollama is running: <code>ollama serve</code><br>
+          2. Model "${ollamaModel}" is installed: <code>ollama pull ${ollamaModel}</code>`;
+        }
+        
+        showErrorModal('❌ Test Failed', errorMessage);
       }
-    } else {
-      const errorText = await response.text();
-      throw new Error(`HTTP ${response.status}: ${errorText}`);
     }
-  } catch (error) {
-    btn.textContent = '✗ Test Failed';
-    btn.style.background = '#e53e3e';
-    
-    setTimeout(() => {
-      btn.textContent = '🧪 Test Connection';
-      btn.style.background = '#667eea';
-      btn.disabled = false;
-    }, 2000);
-    
-    let errorMsg = error.message;
-    if (error.name === 'AbortError') {
-      errorMsg = 'Request timeout - model is taking too long to respond';
-    }
-    
-    showErrorModal(
-      '❌ Test Failed',
-      `<strong>Error:</strong> ${errorMsg}<br><br>
-      <strong>Make sure:</strong><br>
-      1. Ollama is running: <code>ollama serve</code><br>
-      2. Model "${ollamaModel}" is installed: <code>ollama pull ${ollamaModel}</code><br>
-      3. The model is not currently being used by another process`
-    );
-  }
+  );
 });
 
 // Load models when Ollama section is opened

@@ -100,10 +100,26 @@
     
     .collapsible {
       background: #f8f9ff;
-      border: 1px solid #e0e7ff;
+      border: 2px solid #e0e7ff;
       border-radius: 8px;
       margin-bottom: 10px;
       overflow: hidden;
+      transition: all 0.3s ease;
+    }
+    
+    .collapsible.selected {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+      background: #f0f4ff;
+    }
+    
+    .collapsible.selected .collapsible-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .collapsible.selected .collapsible-header .icon {
+      color: white;
     }
     
     .collapsible-header {
@@ -521,9 +537,18 @@
           <span class="icon">▼</span>
         </div>
         <div class="collapsible-content" id="ollamaContent">
+          <div id="ollamaSetupWarning" style="background: #fff3cd; padding: 8px; border-radius: 6px; margin-bottom: 10px; font-size: 11px; border-left: 3px solid #ffc107;">
+            <strong>⚠️ First time setup:</strong> Run this command in CMD (as Administrator):<br>
+            <code style="display: block; margin-top: 4px; background: white; padding: 4px;">setx OLLAMA_ORIGINS "*"</code>
+            Then restart Ollama.
+          </div>
           <div class="status-indicator" id="ollamaStatus">
             <span class="status-dot"></span>
             <span class="status-text">Checking...</span>
+          </div>
+          <div class="status-indicator" id="ollamaCorsStatus" style="display: none; margin-top: 8px;">
+            <span class="status-dot"></span>
+            <span class="status-text">Checking CORS...</span>
           </div>
           <input type="text" id="ollamaUrl" value="http://localhost:11434" placeholder="Ollama URL">
           <div class="model-selector-wrapper">
