@@ -630,9 +630,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     
     (async () => {
       try {
-        // Quick CORS test with short timeout
+        // Quick CORS test with longer timeout
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
         
         const response = await fetch(`${ollamaUrl}/api/generate`, {
           method: 'POST',
@@ -654,14 +654,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         
         clearTimeout(timeoutId);
         
-        if (response.ok || response.status === 200) {
+        // If we got any response (even error), CORS is working
+        if (response.ok || response.status === 200 || response.status === 400) {
           sendResponse({ success: true });
         } else if (response.status === 403) {
           sendResponse({ success: false });
         } else {
-          sendResponse({ success: false });
+          // Any other response means CORS is configured
+          sendResponse({ success: true });
         }
       } catch (error) {
+        // Network error or timeout = CORS not configured
         sendResponse({ success: false });
       }
     })();
