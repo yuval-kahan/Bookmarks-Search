@@ -298,5 +298,10 @@ document.getElementById("stopBtn").addEventListener("click", () => {
     statusDiv.textContent = "";
     errorDiv.textContent = "";
     list.innerHTML = "<li style='color: #e53e3e;'>⏹ Search cancelled</li>";
+    
+    // Clear the cancelled message after 3 seconds
+    setTimeout(() => {
+      list.innerHTML = "";
+    }, 3000);
   }
 });
