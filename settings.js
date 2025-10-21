@@ -1255,6 +1255,29 @@ function createDraggablePlaceholder(text, placeholder, icon) {
   btn.draggable = true;
   btn.contentEditable = false;
   btn.dataset.placeholder = placeholder;
+  
+  // Make it unselectable and undeletable
+  btn.setAttribute("unselectable", "on");
+  btn.style.userSelect = "none";
+  btn.style.webkitUserSelect = "none";
+  btn.style.mozUserSelect = "none";
+  btn.style.msUserSelect = "none";
+
+  // Prevent any deletion attempts
+  btn.addEventListener("keydown", (e) => {
+    if (e.key === "Backspace" || e.key === "Delete") {
+      e.preventDefault();
+      e.stopPropagation();
+      return false;
+    }
+  });
+  
+  btn.addEventListener("beforeinput", (e) => {
+    if (e.inputType === "deleteContentBackward" || e.inputType === "deleteContentForward") {
+      e.preventDefault();
+      return false;
+    }
+  });
 
   // Drag events
   btn.addEventListener("dragstart", (e) => {
@@ -1329,6 +1352,39 @@ function loadPromptIntoEditor(promptText) {
 }
 
 function protectPlaceholders(editorArea) {
+  // Monitor for any changes and restore placeholders if deleted
+  const observer = new MutationObserver((mutations) => {
+    const placeholders = editorArea.querySelectorAll(".search-placeholder");
+    const hasSearch = Array.from(placeholders).some(p => p.dataset.placeholder === "{SEARCH}");
+    const hasBookmarks = Array.from(placeholders).some(p => p.dataset.placeholder === "[BOOKMARKS_WILL_BE_INSERTED_HERE]");
+    
+    // If a placeholder is missing, restore from the last known good state
+    if (!hasSearch || !hasBookmarks) {
+      // Prevent infinite loop
+      observer.disconnect();
+      
+      // Get current content
+      let currentText = getPromptFromEditor();
+      
+      // Restore missing placeholders
+      if (!currentText.includes("{SEARCH}")) {
+        currentText += " {SEARCH}";
+      }
+      if (!currentText.includes("[BOOKMARKS_WILL_BE_INSERTED_HERE]")) {
+        currentText = "[BOOKMARKS_WILL_BE_INSERTED_HERE]\n" + currentText;
+      }
+      
+      // Reload editor with restored content
+      loadPromptIntoEditor(currentText);
+      
+      // Reconnect observer
+      observer.observe(editorArea, { childList: true, subtree: true, characterData: true });
+    }
+  });
+  
+  // Start observing
+  observer.observe(editorArea, { childList: true, subtree: true, characterData: true });
+  
   // Prevent deletion of placeholder buttons
   editorArea.addEventListener("keydown", (e) => {
     // Allow normal editing
