@@ -24,11 +24,10 @@ function loadSettings() {
     // ollamaModel will be loaded from the models list
     if (data.apiProvider) {
       document.getElementById('apiProvider').value = data.apiProvider;
-      // Trigger change to load models
-      document.getElementById('apiProvider').dispatchEvent(new Event('change'));
-      
       // Load saved model
       setTimeout(() => {
+        updateModelDropdown(data.apiProvider, data.apiModel);
+        
         const modelSelect = document.getElementById('apiModelSelect');
         const modelCustom = document.getElementById('apiModelCustom');
         
@@ -39,7 +38,7 @@ function loadSettings() {
           if (optionExists) {
             modelSelect.value = data.apiModel;
           } else {
-            // It's a custom model
+            // It's a custom model that's not in the list yet
             modelSelect.value = 'custom';
             modelCustom.style.display = 'block';
             modelCustom.value = data.apiModel;
@@ -308,28 +307,15 @@ const providerModels = {
 // Update model dropdown when provider changes
 document.getElementById('apiProvider').addEventListener('change', (e) => {
   const provider = e.target.value;
-  const modelSelect = document.getElementById('apiModelSelect');
   const modelCustom = document.getElementById('apiModelCustom');
   
   // Reset
-  modelSelect.innerHTML = '<option value="">Select model...</option>';
   modelCustom.style.display = 'none';
   modelCustom.value = '';
   
   if (provider && providerModels[provider]) {
-    // Populate model options
-    providerModels[provider].forEach(model => {
-      const option = document.createElement('option');
-      option.value = model.value;
-      option.textContent = model.label;
-      modelSelect.appendChild(option);
-    });
-    
-    // Select first non-custom option by default
-    const defaultModel = providerModels[provider].find(m => m.value !== 'custom');
-    if (defaultModel) {
-      modelSelect.value = defaultModel.value;
-    }
+    // Update dropdown with default + custom models
+    updateModelDropdown(provider);
   }
   
   // Show info modal for complex providers
@@ -422,6 +408,11 @@ async function checkAPIVerification() {
           
           // Save verification result
           chrome.storage.local.set({ [verificationKey]: 'verified' });
+          
+          // If it's a custom model that was verified, add it to the list
+          if (modelSelect === 'custom' && modelCustom) {
+            addCustomModelToList(provider, modelCustom);
+          }
         } else {
           statusDiv.className = 'api-verification-status failed';
           statusIcon.textContent = '❌';
@@ -432,6 +423,91 @@ async function checkAPIVerification() {
         }
       }
     );
+  });
+}
+
+// Add custom model to the provider's model list
+function addCustomModelToList(provider, customModel) {
+  // Get saved custom models
+  chrome.storage.local.get(['customModels'], (data) => {
+    const customModels = data.customModels || {};
+    
+    // Initialize provider array if doesn't exist
+    if (!customModels[provider]) {
+      customModels[provider] = [];
+    }
+    
+    // Add model if not already in list
+    if (!customModels[provider].includes(customModel)) {
+      customModels[provider].push(customModel);
+      
+      // Save updated list
+      chrome.storage.local.set({ customModels }, () => {
+        // Refresh the model dropdown to show the new model
+        const currentProvider = document.getElementById('apiProvider').value;
+        if (currentProvider === provider) {
+          updateModelDropdown(provider, customModel);
+        }
+      });
+    }
+  });
+}
+
+// Update model dropdown with custom models
+function updateModelDropdown(provider, selectModel = null) {
+  const modelSelect = document.getElementById('apiModelSelect');
+  
+  // Clear current options
+  modelSelect.innerHTML = '<option value="">Select model...</option>';
+  
+  if (!provider || !providerModels[provider]) return;
+  
+  // Get saved custom models
+  chrome.storage.local.get(['customModels'], (data) => {
+    const customModels = data.customModels || {};
+    const providerCustomModels = customModels[provider] || [];
+    
+    // Add default models
+    providerModels[provider].forEach(model => {
+      if (model.value !== 'custom') {
+        const option = document.createElement('option');
+        option.value = model.value;
+        option.textContent = model.label;
+        modelSelect.appendChild(option);
+      }
+    });
+    
+    // Add custom models (if any)
+    if (providerCustomModels.length > 0) {
+      const optgroup = document.createElement('optgroup');
+      optgroup.label = 'Your Custom Models';
+      
+      providerCustomModels.forEach(customModel => {
+        const option = document.createElement('option');
+        option.value = customModel;
+        option.textContent = `${customModel} ✅`;
+        optgroup.appendChild(option);
+      });
+      
+      modelSelect.appendChild(optgroup);
+    }
+    
+    // Add "Custom Model..." option at the end
+    const customOption = document.createElement('option');
+    customOption.value = 'custom';
+    customOption.textContent = '✏️ Custom Model...';
+    modelSelect.appendChild(customOption);
+    
+    // Select the specified model if provided
+    if (selectModel) {
+      modelSelect.value = selectModel;
+    } else {
+      // Select first non-custom option by default
+      const defaultModel = providerModels[provider].find(m => m.value !== 'custom');
+      if (defaultModel) {
+        modelSelect.value = defaultModel.value;
+      }
+    }
   });
 }
 
