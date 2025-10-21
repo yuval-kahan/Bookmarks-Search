@@ -217,6 +217,123 @@ If no bookmarks match, return: NONE`;
       };
       break;
 
+    case "fireworks":
+      apiUrl = "https://api.fireworks.ai/inference/v1/chat/completions";
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        model: model || "accounts/fireworks/models/llama-v3p1-8b-instruct",
+        messages: [{ role: "user", content: userPrompt }],
+      };
+      break;
+
+    case "ai21":
+      apiUrl = "https://api.ai21.com/studio/v1/chat/completions";
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        model: model || "jamba-instruct",
+        messages: [{ role: "user", content: userPrompt }],
+      };
+      break;
+
+    case "huggingface":
+      apiUrl = `https://api-inference.huggingface.co/models/${
+        model || "mistralai/Mistral-7B-Instruct-v0.2"
+      }`;
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        inputs: userPrompt,
+        parameters: { max_new_tokens: 250, temperature: 0.3 },
+      };
+      break;
+
+
+
+    case "anyscale":
+      apiUrl = "https://api.endpoints.anyscale.com/v1/chat/completions";
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        model: model || "meta-llama/Llama-2-7b-chat-hf",
+        messages: [{ role: "user", content: userPrompt }],
+      };
+      break;
+
+    case "azure":
+      // Azure requires endpoint in model field: https://YOUR-RESOURCE.openai.azure.com/openai/deployments/YOUR-DEPLOYMENT
+      apiUrl = `${model}/chat/completions?api-version=2024-02-15-preview`;
+      headers = {
+        "Content-Type": "application/json",
+        "api-key": apiKey,
+      };
+      body = {
+        messages: [{ role: "user", content: userPrompt }],
+        temperature: 0.3,
+      };
+      break;
+
+
+
+    case "cloudflare":
+      // Cloudflare Workers AI requires account ID in model field
+      apiUrl = `https://api.cloudflare.com/client/v4/accounts/${model}/ai/run/@cf/meta/llama-2-7b-chat-int8`;
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        messages: [{ role: "user", content: userPrompt }],
+      };
+      break;
+
+    case "openrouter":
+      apiUrl = "https://openrouter.ai/api/v1/chat/completions";
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+        "HTTP-Referer": "chrome-extension://bookmark-search",
+      };
+      body = {
+        model: model || "meta-llama/llama-3.1-8b-instruct:free",
+        messages: [{ role: "user", content: userPrompt }],
+      };
+      break;
+
+    case "novita":
+      apiUrl = "https://api.novita.ai/v3/openai/chat/completions";
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        model: model || "meta-llama/llama-3.1-8b-instruct",
+        messages: [{ role: "user", content: userPrompt }],
+      };
+      break;
+
+    case "lepton":
+      apiUrl = `https://${
+        model || "llama2-7b"
+      }.lepton.run/api/v1/chat/completions`;
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        messages: [{ role: "user", content: userPrompt }],
+      };
+      break;
+
     default:
       throw new Error("Unsupported API provider");
   }
@@ -244,6 +361,13 @@ If no bookmarks match, return: NONE`;
     case "xai":
     case "together":
     case "deepseek":
+    case "fireworks":
+    case "ai21":
+    case "anyscale":
+    case "azure":
+    case "openrouter":
+    case "novita":
+    case "lepton":
       aiResponse = data.choices[0].message.content.trim();
       break;
     case "anthropic":
@@ -254,6 +378,14 @@ If no bookmarks match, return: NONE`;
       break;
     case "cohere":
       aiResponse = data.generations[0].text.trim();
+      break;
+    case "huggingface":
+      aiResponse = Array.isArray(data)
+        ? data[0].generated_text.trim()
+        : data.generated_text.trim();
+      break;
+    case "cloudflare":
+      aiResponse = data.result.response.trim();
       break;
     default:
       throw new Error("Unable to parse response");

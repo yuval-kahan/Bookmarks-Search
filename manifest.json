@@ -16,7 +16,16 @@
     "https://api.perplexity.ai/*",
     "https://api.groq.com/*",
     "https://api.together.xyz/*",
-    "https://api.deepseek.com/*"
+    "https://api.deepseek.com/*",
+    "https://api.fireworks.ai/*",
+    "https://api.ai21.com/*",
+    "https://api-inference.huggingface.co/*",
+    "https://api.endpoints.anyscale.com/*",
+    "https://*.openai.azure.com/*",
+    "https://api.cloudflare.com/*",
+    "https://openrouter.ai/*",
+    "https://api.novita.ai/*",
+    "https://*.lepton.run/*"
   ],
   "background": {
     "service_worker": "background.js"
