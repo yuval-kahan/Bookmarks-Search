@@ -1261,10 +1261,6 @@ function createDraggablePlaceholder(text, placeholder, icon) {
     e.preventDefault();
   });
 
-  btn.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-  });
-
   // Drag events
   btn.addEventListener("dragstart", (e) => {
     btn.classList.add("dragging");
@@ -1335,6 +1331,14 @@ function loadPromptIntoEditor(promptText) {
 }
 
 function setupDropZone(editorArea) {
+  let draggedElement = null;
+
+  editorArea.addEventListener("dragstart", (e) => {
+    if (e.target.classList.contains("search-placeholder")) {
+      draggedElement = e.target;
+    }
+  });
+
   editorArea.addEventListener("dragover", (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
@@ -1343,28 +1347,32 @@ function setupDropZone(editorArea) {
   editorArea.addEventListener("drop", (e) => {
     e.preventDefault();
 
-    // Get the search button
-    const searchBtn = editorArea.querySelector(".search-placeholder");
-    if (!searchBtn) return;
+    if (!draggedElement) return;
 
     // Get drop position
     const range = document.caretRangeFromPoint(e.clientX, e.clientY);
     if (!range) return;
 
-    // Remove search button from current position
-    searchBtn.remove();
+    // Remove dragged element from current position
+    draggedElement.remove();
 
     // Insert at new position
-    range.insertNode(searchBtn);
+    range.insertNode(draggedElement);
 
     // Place cursor after the button
     const newRange = document.createRange();
-    newRange.setStartAfter(searchBtn);
+    newRange.setStartAfter(draggedElement);
     newRange.collapse(true);
 
     const selection = window.getSelection();
     selection.removeAllRanges();
     selection.addRange(newRange);
+
+    draggedElement = null;
+  });
+
+  editorArea.addEventListener("dragend", () => {
+    draggedElement = null;
   });
 }
 
