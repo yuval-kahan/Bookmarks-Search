@@ -1356,15 +1356,25 @@ function protectPlaceholders(editorArea) {
       }
     });
 
-    // If selection includes placeholder, delete everything except placeholders
+    // If selection includes placeholder, prevent deletion
     if (hasPlaceholder) {
       e.preventDefault();
       e.stopPropagation();
       
+      // Save all placeholders
+      const savedPlaceholders = [];
+      placeholders.forEach((placeholder) => {
+        savedPlaceholders.push({
+          element: placeholder,
+          parent: placeholder.parentNode,
+          nextSibling: placeholder.nextSibling
+        });
+      });
+      
       // Get all content
       const contents = Array.from(editorArea.childNodes);
       
-      // Remove all text nodes and non-placeholder elements
+      // Remove all text nodes and non-placeholder elements in selection
       contents.forEach((node) => {
         if (node.nodeType === Node.TEXT_NODE) {
           // Check if this text node is in the selection
@@ -1375,6 +1385,19 @@ function protectPlaceholders(editorArea) {
           // Remove non-placeholder elements if in selection
           if (range.intersectsNode(node)) {
             node.remove();
+          }
+        }
+        // DO NOT remove placeholders - they stay!
+      });
+      
+      // Ensure all placeholders are still in the editor
+      savedPlaceholders.forEach((saved) => {
+        if (!editorArea.contains(saved.element)) {
+          // Re-insert placeholder if it was removed
+          if (saved.nextSibling) {
+            saved.parent.insertBefore(saved.element, saved.nextSibling);
+          } else {
+            saved.parent.appendChild(saved.element);
           }
         }
       });
