@@ -76,23 +76,36 @@ document.getElementById("settingsBtn").addEventListener("click", () => {
 // Update indicator on load
 updateSearchModeIndicator();
 
+// Track if search is in progress
+let searchInProgress = false;
+let abortSearch = false;
+
 // Search functionality
 document.getElementById("searchBtn").addEventListener("click", async () => {
   const query = document.getElementById("query").value.trim();
   const errorDiv = document.getElementById("error");
   const statusDiv = document.getElementById("status");
   const list = document.getElementById("results");
+  const stopBtn = document.getElementById("stopBtn");
+  const searchBtn = document.getElementById("searchBtn");
 
   errorDiv.textContent = "";
   errorDiv.className = "";
   statusDiv.textContent = "";
   list.innerHTML = "";
+  abortSearch = false;
 
   if (!query) {
     errorDiv.textContent = "Please enter a search term";
     errorDiv.className = "error";
     return;
   }
+
+  // Show stop button, disable search button
+  searchInProgress = true;
+  stopBtn.classList.add("visible");
+  searchBtn.disabled = true;
+  searchBtn.style.opacity = "0.6";
 
   // Get saved search mode
   chrome.storage.local.get(["searchMode"], (data) => {
@@ -106,7 +119,16 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
         chrome.runtime.sendMessage(
           { action: "searchBookmarks", query, searchType },
           (response) => {
+            if (abortSearch) {
+              displayResults([]);
+              return;
+            }
+
             if (chrome.runtime.lastError) {
+              searchInProgress = false;
+              stopBtn.classList.remove("visible");
+              searchBtn.disabled = false;
+              searchBtn.style.opacity = "1";
               errorDiv.textContent =
                 "Error: " + chrome.runtime.lastError.message;
               errorDiv.className = "error";
@@ -114,6 +136,10 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
             }
 
             if (!response || !response.results) {
+              searchInProgress = false;
+              stopBtn.classList.remove("visible");
+              searchBtn.disabled = false;
+              searchBtn.style.opacity = "1";
               errorDiv.textContent = "No response from background script";
               errorDiv.className = "error";
               return;
@@ -164,7 +190,16 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
             (response) => {
               statusDiv.textContent = "";
 
+              if (abortSearch) {
+                displayResults([]);
+                return;
+              }
+
               if (chrome.runtime.lastError) {
+                searchInProgress = false;
+                stopBtn.classList.remove("visible");
+                searchBtn.disabled = false;
+                searchBtn.style.opacity = "1";
                 errorDiv.textContent =
                   "Error: " + chrome.runtime.lastError.message;
                 errorDiv.className = "error";
@@ -172,12 +207,20 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
               }
 
               if (response.error) {
+                searchInProgress = false;
+                stopBtn.classList.remove("visible");
+                searchBtn.disabled = false;
+                searchBtn.style.opacity = "1";
                 errorDiv.textContent = "AI Error: " + response.error;
                 errorDiv.className = "error";
                 return;
               }
 
               if (!response || !response.results) {
+                searchInProgress = false;
+                stopBtn.classList.remove("visible");
+                searchBtn.disabled = false;
+                searchBtn.style.opacity = "1";
                 errorDiv.textContent = "No response from AI";
                 errorDiv.className = "error";
                 return;
@@ -194,6 +237,19 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
 
 function displayResults(results) {
   const list = document.getElementById("results");
+  const stopBtn = document.getElementById("stopBtn");
+  const searchBtn = document.getElementById("searchBtn");
+
+  // Hide stop button, enable search button
+  searchInProgress = false;
+  stopBtn.classList.remove("visible");
+  searchBtn.disabled = false;
+  searchBtn.style.opacity = "1";
+
+  if (abortSearch) {
+    list.innerHTML = "<li style='color: #e53e3e;'>Search cancelled</li>";
+    return;
+  }
 
   if (results.length === 0) {
     list.innerHTML = "<li>No bookmarks found</li>";
@@ -215,5 +271,32 @@ function displayResults(results) {
 document.getElementById("query").addEventListener("keypress", (e) => {
   if (e.key === "Enter") {
     document.getElementById("searchBtn").click();
+  }
+});
+
+// Stop button functionality
+document.getElementById("stopBtn").addEventListener("click", () => {
+  if (searchInProgress) {
+    abortSearch = true;
+    searchInProgress = false;
+
+    const stopBtn = document.getElementById("stopBtn");
+    const searchBtn = document.getElementById("searchBtn");
+    const statusDiv = document.getElementById("status");
+    const errorDiv = document.getElementById("error");
+    const list = document.getElementById("results");
+
+    // Send abort message to background script to stop the fetch request
+    chrome.runtime.sendMessage({ action: "abortSearch" });
+
+    // Hide stop button, enable search button
+    stopBtn.classList.remove("visible");
+    searchBtn.disabled = false;
+    searchBtn.style.opacity = "1";
+
+    // Clear status and show cancelled message
+    statusDiv.textContent = "";
+    errorDiv.textContent = "";
+    list.innerHTML = "<li style='color: #e53e3e;'>⏹ Search cancelled</li>";
   }
 });

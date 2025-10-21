@@ -1,3 +1,6 @@
+// Global abort controller for search requests
+let currentSearchAbortController = null;
+
 // Helper function to get API URL for different providers
 function getAPIUrl(provider, model, apiKey) {
   const urls = {
@@ -69,6 +72,9 @@ Your response:`;
     prompt = prompt.replace('[BOOKMARKS_WILL_BE_INSERTED_HERE]', bookmarkList);
   }
 
+  // Create abort controller for this request
+  currentSearchAbortController = new AbortController();
+  
   const response = await fetch(`${ollamaUrl}/api/generate`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -77,6 +83,7 @@ Your response:`;
       prompt: prompt,
       stream: false,
     }),
+    signal: currentSearchAbortController.signal,
   });
 
   if (!response.ok) {
@@ -370,10 +377,14 @@ If no bookmarks match, return: NONE`;
       throw new Error("Unsupported API provider");
   }
 
+  // Create abort controller for this request
+  currentSearchAbortController = new AbortController();
+  
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: headers,
     body: JSON.stringify(body),
+    signal: currentSearchAbortController.signal,
   });
 
   if (!response.ok) {
@@ -516,6 +527,16 @@ async function exactMatchSearch(query) {
 }
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.action === "abortSearch") {
+    // Abort the current search if one is in progress
+    if (currentSearchAbortController) {
+      currentSearchAbortController.abort();
+      currentSearchAbortController = null;
+    }
+    sendResponse({ success: true });
+    return true;
+  }
+  
   if (request.action === "verifyAPI") {
     const { provider, apiKey, model } = request;
     
@@ -696,10 +717,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         
         if (response.ok) {
           const data = await response.json();
-          if (data.response) {
+          // Check if we got a valid response object (even if response is empty)
+          if (data && (data.response !== undefined || data.done !== undefined)) {
             sendResponse({ success: true });
           } else {
-            sendResponse({ success: false, error: 'No response from model' });
+            sendResponse({ success: false, error: 'Invalid response format from model' });
           }
         } else if (response.status === 403) {
           sendResponse({ 

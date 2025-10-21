@@ -74,8 +74,14 @@
       box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
     }
     
+    .button-group {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    
     #searchBtn {
-      width: 100%;
+      flex: 1;
       padding: 12px;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       color: white;
@@ -95,6 +101,34 @@
     
     #searchBtn:active {
       transform: translateY(0);
+    }
+    
+    #stopBtn {
+      padding: 12px 20px;
+      background: #e53e3e;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 2px 8px rgba(229, 62, 62, 0.3);
+      display: none;
+    }
+    
+    #stopBtn:hover {
+      background: #c53030;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(229, 62, 62, 0.4);
+    }
+    
+    #stopBtn:active {
+      transform: translateY(0);
+    }
+    
+    #stopBtn.visible {
+      display: block;
     }
     
     #status {
@@ -205,7 +239,10 @@
       <input type="text" id="query" placeholder="Search your bookmarks...">
     </div>
     
-    <button id="searchBtn">Search</button>
+    <div class="button-group">
+      <button id="searchBtn">Search</button>
+      <button id="stopBtn">⏹ Stop</button>
+    </div>
     
     <div id="status"></div>
     <div id="error"></div>
