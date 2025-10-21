@@ -1336,18 +1336,56 @@ function setupDropZone(editorArea) {
   editorArea.addEventListener("dragstart", (e) => {
     if (e.target.classList.contains("search-placeholder")) {
       draggedElement = e.target;
+      // Add visual feedback
+      draggedElement.style.opacity = "0.5";
     }
   });
 
   editorArea.addEventListener("dragover", (e) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+
+    if (!draggedElement) return;
+
+    // Get drop position and show preview
+    const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+    if (!range) return;
+
+    // Create a temporary clone for preview
+    const existingPreview = editorArea.querySelector(".drag-preview");
+    if (existingPreview) {
+      existingPreview.remove();
+    }
+
+    // Only show preview if not hovering over the dragged element itself
+    if (range.startContainer !== draggedElement && !draggedElement.contains(range.startContainer)) {
+      const preview = draggedElement.cloneNode(true);
+      preview.classList.add("drag-preview");
+      preview.style.opacity = "0.3";
+      preview.style.pointerEvents = "none";
+      preview.draggable = false;
+
+      try {
+        range.insertNode(preview);
+      } catch (e) {
+        // Ignore errors if insertion fails
+      }
+    }
   });
 
   editorArea.addEventListener("drop", (e) => {
     e.preventDefault();
 
+    // Remove any preview
+    const preview = editorArea.querySelector(".drag-preview");
+    if (preview) {
+      preview.remove();
+    }
+
     if (!draggedElement) return;
+
+    // Restore opacity
+    draggedElement.style.opacity = "1";
 
     // Get drop position
     const range = document.caretRangeFromPoint(e.clientX, e.clientY);
@@ -1372,7 +1410,25 @@ function setupDropZone(editorArea) {
   });
 
   editorArea.addEventListener("dragend", () => {
+    // Clean up
+    const preview = editorArea.querySelector(".drag-preview");
+    if (preview) {
+      preview.remove();
+    }
+    if (draggedElement) {
+      draggedElement.style.opacity = "1";
+    }
     draggedElement = null;
+  });
+
+  editorArea.addEventListener("dragleave", (e) => {
+    // Remove preview when leaving the editor area
+    if (e.target === editorArea) {
+      const preview = editorArea.querySelector(".drag-preview");
+      if (preview) {
+        preview.remove();
+      }
+    }
   });
 }
 
