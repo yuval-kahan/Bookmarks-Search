@@ -536,6 +536,7 @@ document.getElementById('infoModal').addEventListener('click', (e) => {
 async function loadOllamaModels() {
   const modelSelect = document.getElementById('ollamaModel');
   const refreshBtn = document.getElementById('refreshModelsBtn');
+  const recommendationDiv = document.getElementById('ollamaRecommendation');
   const ollamaUrl = document.getElementById('ollamaUrl').value.trim() || 'http://localhost:11434';
   
   // Save current selection
@@ -557,13 +558,30 @@ async function loadOllamaModels() {
       if (data.models && data.models.length > 0) {
         modelSelect.innerHTML = '';
         
+        // Check if recommended model exists
+        const hasRecommended = data.models.some(m => m.name.includes('llama3.1:8b') || m.name.includes('llama3.1'));
+        
         // Add models to dropdown
         data.models.forEach(model => {
           const option = document.createElement('option');
           option.value = model.name;
-          option.textContent = `${model.name} (${formatSize(model.size)})`;
+          
+          // Mark recommended models
+          if (model.name.includes('llama3.1:8b') || model.name.includes('llama3.1')) {
+            option.textContent = `⭐ ${model.name} (${formatSize(model.size)})`;
+          } else {
+            option.textContent = `${model.name} (${formatSize(model.size)})`;
+          }
+          
           modelSelect.appendChild(option);
         });
+        
+        // Show recommendation if no good model installed
+        if (!hasRecommended) {
+          recommendationDiv.style.display = 'block';
+        } else {
+          recommendationDiv.style.display = 'none';
+        }
         
         // Restore previous selection or select first model
         if (currentModel && data.models.some(m => m.name === currentModel)) {
@@ -576,6 +594,7 @@ async function loadOllamaModels() {
         chrome.storage.local.set({ ollamaModel: modelSelect.value });
       } else {
         modelSelect.innerHTML = '<option value="">No models installed</option>';
+        recommendationDiv.style.display = 'block';
       }
     } else {
       throw new Error('Failed to fetch models');
@@ -794,6 +813,41 @@ document.getElementById('ollamaModel').addEventListener('change', () => {
   checkOllamaStatus();
   // Save selected model
   chrome.storage.local.set({ ollamaModel: document.getElementById('ollamaModel').value });
+});
+
+// Install recommended model button
+document.getElementById('installModelBtn').addEventListener('click', () => {
+  const modal = document.getElementById('infoModal');
+  const modalTitle = document.getElementById('modalTitle');
+  const modalBody = document.getElementById('modalBody');
+  
+  modalTitle.textContent = '📥 Install Recommended Model';
+  modalBody.innerHTML = `
+    <strong>To install llama3.1:8b, follow these steps:</strong><br><br>
+    
+    <strong>1. Open CMD (Command Prompt):</strong><br>
+    Press <code>Win + R</code>, type <code>cmd</code>, press Enter<br><br>
+    
+    <strong>2. Run this command:</strong><br>
+    <code style="display: block; background: #f0f0f0; padding: 8px; margin: 8px 0; border-radius: 4px; user-select: all;">ollama pull llama3.1:8b</code>
+    <button onclick="navigator.clipboard.writeText('ollama pull llama3.1:8b'); this.textContent='✓ Copied!'; setTimeout(() => this.textContent='📋 Copy Command', 2000)" 
+            style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 10px;">
+      📋 Copy Command
+    </button><br>
+    
+    <strong>3. Wait for download to complete</strong><br>
+    This will download ~4.7GB<br><br>
+    
+    <strong>4. Click the refresh button (🔄)</strong><br>
+    The new model will appear in the list<br><br>
+    
+    <strong>Why llama3.1:8b?</strong><br>
+    • Better accuracy than smaller models<br>
+    • Fast enough for real-time search<br>
+    • Good balance of speed and quality
+  `;
+  
+  modal.classList.add('active');
 });
 
 // Load settings on page open

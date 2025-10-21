@@ -483,6 +483,23 @@
       transform: none;
     }
     
+    .install-model-btn {
+      padding: 6px 12px;
+      background: #48bb78;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .install-model-btn:hover {
+      background: #38a169;
+      transform: translateY(-1px);
+    }
+    
     .api-verification-status {
       display: flex;
       align-items: center;
@@ -592,6 +609,11 @@
           <div class="status-indicator" id="ollamaCorsStatus" style="display: none; margin-top: 8px;">
             <span class="status-dot"></span>
             <span class="status-text">Checking CORS...</span>
+          </div>
+          <div id="ollamaRecommendation" style="background: #e8f5e9; padding: 10px; border-radius: 6px; margin-bottom: 10px; font-size: 12px; border-left: 3px solid #48bb78; display: none;">
+            <strong>⭐ Recommended Model:</strong> <code>llama3.1:8b</code><br>
+            <span style="color: #666; font-size: 11px;">Better accuracy for bookmark search. Click to install:</span><br>
+            <button class="install-model-btn" id="installModelBtn" style="margin-top: 6px;">📥 Install llama3.1:8b</button>
           </div>
           <input type="text" id="ollamaUrl" value="http://localhost:11434" placeholder="Ollama URL">
           <div class="model-selector-wrapper">
