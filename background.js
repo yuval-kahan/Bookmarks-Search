@@ -43,14 +43,15 @@ async function getAllBookmarks() {
 }
 
 // AI search using Ollama
-async function aiSearchWithOllama(query, ollamaUrl, ollamaModel) {
+async function aiSearchWithOllama(query, ollamaUrl, ollamaModel, customPrompt) {
   const allBookmarks = await getAllBookmarks();
 
   const bookmarkList = allBookmarks
     .map((b, i) => `${i + 1}. ${b.title} - ${b.url} (Folder: ${b.path})`)
     .join("\n");
 
-  const prompt = `You are a bookmark search assistant. Here are all the user's bookmarks:
+  // Use custom prompt if provided, otherwise use default
+  const defaultPrompt = `You are a bookmark search assistant. Here are all the user's bookmarks:
 
 ${bookmarkList}
 
@@ -60,6 +61,13 @@ Based on the query, return ONLY the numbers of the most relevant bookmarks (comm
 If no bookmarks match, return: NONE
 
 Your response:`;
+
+  let prompt = defaultPrompt;
+  if (customPrompt) {
+    // Replace {SEARCH} with actual query and insert bookmarks
+    prompt = customPrompt.replace('{SEARCH}', query);
+    prompt = prompt.replace('[BOOKMARKS_WILL_BE_INSERTED_HERE]', bookmarkList);
+  }
 
   const response = await fetch(`${ollamaUrl}/api/generate`, {
     method: "POST",
@@ -91,14 +99,14 @@ Your response:`;
 }
 
 // AI search using API providers
-async function aiSearchWithAPI(query, provider, apiKey, model) {
+async function aiSearchWithAPI(query, provider, apiKey, model, customPrompt) {
   const allBookmarks = await getAllBookmarks();
 
   const bookmarkList = allBookmarks
     .map((b, i) => `${i + 1}. ${b.title} - ${b.url} (Folder: ${b.path})`)
     .join("\n");
 
-  const userPrompt = `You are a bookmark search assistant. Here are all the user's bookmarks:
+  const defaultUserPrompt = `You are a bookmark search assistant. Here are all the user's bookmarks:
 
 ${bookmarkList}
 
@@ -106,6 +114,13 @@ User query: "${query}"
 
 Based on the query, return ONLY the numbers of the most relevant bookmarks (comma-separated). For example: 1,5,12
 If no bookmarks match, return: NONE`;
+
+  let userPrompt = defaultUserPrompt;
+  if (customPrompt) {
+    // Replace {SEARCH} with actual query and insert bookmarks
+    userPrompt = customPrompt.replace('{SEARCH}', query);
+    userPrompt = userPrompt.replace('[BOOKMARKS_WILL_BE_INSERTED_HERE]', bookmarkList);
+  }
 
   let apiUrl, headers, body;
 
@@ -731,7 +746,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "aiSearchBookmarks") {
-    const { query, settings } = request;
+    const { query, settings, customPrompt } = request;
 
     (async () => {
       try {
@@ -743,14 +758,15 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
             query,
             settings.apiProvider,
             settings.apiKey,
-            settings.apiModel
+            settings.apiModel,
+            customPrompt
           );
         }
         // Fall back to Ollama
         else if (settings.ollamaUrl || settings.ollamaModel) {
           const ollamaUrl = settings.ollamaUrl || "http://localhost:11434";
           const ollamaModel = settings.ollamaModel || "llama2";
-          results = await aiSearchWithOllama(query, ollamaUrl, ollamaModel);
+          results = await aiSearchWithOllama(query, ollamaUrl, ollamaModel, customPrompt);
         } else {
           throw new Error("No AI provider configured");
         }

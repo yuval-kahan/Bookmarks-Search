@@ -1119,3 +1119,201 @@ document.getElementById('infoModal')?.addEventListener('click', (e) => {
     document.getElementById('infoModal').classList.remove('active');
   }
 });
+
+// Default Prompt Template
+const DEFAULT_PROMPT = `You are a bookmark search assistant. Here are all the user's bookmarks:
+
+[BOOKMARKS_WILL_BE_INSERTED_HERE]
+
+User query: "{SEARCH}"
+
+Based on the query, return ONLY the numbers of the most relevant bookmarks (comma-separated). For example: 1,5,12
+If no bookmarks match, return: NONE
+
+Your response:`;
+
+// Prompt Editor Functions
+function openPromptEditor() {
+  const mainContainer = document.querySelector('.container');
+  const promptScreen = document.getElementById('promptEditorScreen');
+  
+  // Hide main settings
+  mainContainer.style.display = 'none';
+  promptScreen.style.display = 'block';
+  
+  // Load current prompt
+  chrome.storage.local.get(['customPrompt'], (data) => {
+    const currentPrompt = data.customPrompt || DEFAULT_PROMPT;
+    loadPromptIntoEditor(currentPrompt);
+  });
+}
+
+function closePromptEditor() {
+  const mainContainer = document.querySelector('.container');
+  const promptScreen = document.getElementById('promptEditorScreen');
+  
+  mainContainer.style.display = 'block';
+  promptScreen.style.display = 'none';
+}
+
+function loadPromptIntoEditor(promptText) {
+  const editorArea = document.getElementById('promptEditorArea');
+  
+  // Split prompt by {SEARCH} placeholder
+  const parts = promptText.split('{SEARCH}');
+  
+  // Clear editor
+  editorArea.innerHTML = '';
+  
+  // Add first part as text
+  if (parts[0]) {
+    const textNode = document.createTextNode(parts[0]);
+    editorArea.appendChild(textNode);
+  }
+  
+  // Add draggable {SEARCH} button
+  const searchBtn = document.createElement('span');
+  searchBtn.className = 'search-placeholder';
+  searchBtn.textContent = '🔍 search word';
+  searchBtn.draggable = true;
+  searchBtn.contentEditable = false;
+  
+  // Prevent deletion and editing
+  searchBtn.addEventListener('keydown', (e) => {
+    e.preventDefault();
+  });
+  
+  searchBtn.addEventListener('mousedown', (e) => {
+    // Prevent text selection
+    e.preventDefault();
+  });
+  
+  // Drag events
+  searchBtn.addEventListener('dragstart', (e) => {
+    searchBtn.classList.add('dragging');
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', '{SEARCH}');
+  });
+  
+  searchBtn.addEventListener('dragend', () => {
+    searchBtn.classList.remove('dragging');
+  });
+  
+  editorArea.appendChild(searchBtn);
+  
+  // Add remaining text
+  if (parts[1]) {
+    const textNode = document.createTextNode(parts[1]);
+    editorArea.appendChild(textNode);
+  }
+  
+  // Setup drop zone
+  setupDropZone(editorArea);
+}
+
+function setupDropZone(editorArea) {
+  editorArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  });
+  
+  editorArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    
+    // Get the search button
+    const searchBtn = editorArea.querySelector('.search-placeholder');
+    if (!searchBtn) return;
+    
+    // Get drop position
+    const range = document.caretRangeFromPoint(e.clientX, e.clientY);
+    if (!range) return;
+    
+    // Remove search button from current position
+    searchBtn.remove();
+    
+    // Insert at new position
+    range.insertNode(searchBtn);
+    
+    // Place cursor after the button
+    const newRange = document.createRange();
+    newRange.setStartAfter(searchBtn);
+    newRange.collapse(true);
+    
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(newRange);
+  });
+}
+
+function getPromptFromEditor() {
+  const editorArea = document.getElementById('promptEditorArea');
+  let promptText = '';
+  
+  // Iterate through all child nodes
+  editorArea.childNodes.forEach(node => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      promptText += node.textContent;
+    } else if (node.classList && node.classList.contains('search-placeholder')) {
+      promptText += '{SEARCH}';
+    } else if (node.textContent) {
+      promptText += node.textContent;
+    }
+  });
+  
+  return promptText;
+}
+
+function savePrompt() {
+  const promptText = getPromptFromEditor();
+  
+  // Verify {SEARCH} exists
+  if (!promptText.includes('{SEARCH}')) {
+    showErrorModal('Invalid Prompt', 'Prompt must contain the {SEARCH} placeholder. It cannot be removed.');
+    return;
+  }
+  
+  // Save to storage
+  chrome.storage.local.set({ customPrompt: promptText }, () => {
+    // Show success message
+    const saveBtn = document.getElementById('promptSaveBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = '✓ Saved!';
+    saveBtn.style.background = '#48bb78';
+    
+    setTimeout(() => {
+      saveBtn.textContent = originalText;
+      saveBtn.style.background = '';
+      closePromptEditor();
+    }, 1500);
+  });
+}
+
+function resetPromptToDefault() {
+  if (confirm('Are you sure you want to reset the prompt to default?')) {
+    loadPromptIntoEditor(DEFAULT_PROMPT);
+  }
+}
+
+// Event Listeners for Prompt Editor
+document.getElementById('promptBtn').addEventListener('click', openPromptEditor);
+document.getElementById('promptBackBtn').addEventListener('click', closePromptEditor);
+document.getElementById('promptSaveBtn').addEventListener('click', savePrompt);
+document.getElementById('promptResetBtn').addEventListener('click', resetPromptToDefault);
+
+// Prevent {SEARCH} button deletion
+document.getElementById('promptEditorArea').addEventListener('keydown', (e) => {
+  const selection = window.getSelection();
+  if (!selection.rangeCount) return;
+  
+  const range = selection.getRangeAt(0);
+  const searchBtn = document.querySelector('.search-placeholder');
+  
+  if (!searchBtn) return;
+  
+  // Check if trying to delete the search button
+  if (e.key === 'Backspace' || e.key === 'Delete') {
+    if (range.intersectsNode(searchBtn)) {
+      e.preventDefault();
+    }
+  }
+});

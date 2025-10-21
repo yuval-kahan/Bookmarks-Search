@@ -644,6 +644,146 @@
     .api-verification-status.failed .verify-text {
       color: #e53e3e;
     }
+    
+    .prompt-btn {
+      width: 100%;
+      padding: 12px;
+      background: #667eea;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-bottom: 10px;
+    }
+    
+    .prompt-btn:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+    }
+    
+    .prompt-editor-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: white;
+      z-index: 999;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .prompt-editor-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #f0f0f0;
+    }
+    
+    .prompt-editor-header h1 {
+      font-size: 20px;
+      font-weight: 600;
+      color: #667eea;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .prompt-editor-content {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    
+    .prompt-editor-area {
+      min-height: 300px;
+      padding: 15px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 13px;
+      line-height: 1.6;
+      color: #333;
+      background: #f8f9ff;
+      outline: none;
+      transition: border-color 0.3s ease;
+    }
+    
+    .prompt-editor-area:focus {
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .search-placeholder {
+      display: inline-block;
+      padding: 2px 8px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-radius: 12px;
+      font-weight: 600;
+      font-size: 11px;
+      cursor: move;
+      user-select: none;
+      margin: 0 3px;
+      box-shadow: 0 2px 6px rgba(102, 126, 234, 0.3);
+      transition: all 0.2s ease;
+      vertical-align: middle;
+    }
+    
+    .search-placeholder:hover {
+      transform: scale(1.05);
+      box-shadow: 0 3px 10px rgba(102, 126, 234, 0.5);
+    }
+    
+    .search-placeholder.dragging {
+      opacity: 0.5;
+      transform: scale(0.95);
+    }
+    
+    .prompt-editor-buttons {
+      display: flex;
+      gap: 10px;
+    }
+    
+    .prompt-save-btn {
+      flex: 1;
+      padding: 12px;
+      background: #48bb78;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .prompt-save-btn:hover {
+      background: #38a169;
+      transform: translateY(-1px);
+    }
+    
+    .prompt-reset-btn {
+      flex: 1;
+      padding: 12px;
+      background: #ed8936;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .prompt-reset-btn:hover {
+      background: #dd6b20;
+      transform: translateY(-1px);
+    }
   </style>
 </head>
 <body>
@@ -794,10 +934,31 @@
     </div>
     
     <button class="save-btn" id="saveBtn">💾 Save Settings</button>
+    <button class="prompt-btn" id="promptBtn">📝 Edit Prompt</button>
     <div id="saveStatus"></div>
     
     <div class="info-box">
       💡 <strong>Tip:</strong> Choose Simple for fast keyword search, or AI Search for natural language queries like "websites about programming"
+    </div>
+  </div>
+  
+  <!-- Prompt Editor Screen -->
+  <div class="prompt-editor-screen" id="promptEditorScreen" style="display: none;">
+    <div class="prompt-editor-header">
+      <div class="back-icon" id="promptBackBtn" title="Back">←</div>
+      <h1>📝 Edit Prompt</h1>
+      <div style="width: 29px;"></div>
+    </div>
+    
+    <div class="prompt-editor-content">
+      <div class="prompt-editor-area" id="promptEditorArea" contenteditable="true">
+        <!-- Prompt text and draggable {SEARCH} button will be here -->
+      </div>
+      
+      <div class="prompt-editor-buttons">
+        <button class="prompt-save-btn" id="promptSaveBtn">💾 Save Prompt</button>
+        <button class="prompt-reset-btn" id="promptResetBtn">🔄 Reset to Default</button>
+      </div>
     </div>
   </div>
   

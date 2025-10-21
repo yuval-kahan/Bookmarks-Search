@@ -128,7 +128,14 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
       statusDiv.textContent = "Searching with AI...";
 
       chrome.storage.local.get(
-        ["ollamaUrl", "ollamaModel", "apiProvider", "apiKeys", "apiModel"],
+        [
+          "ollamaUrl",
+          "ollamaModel",
+          "apiProvider",
+          "apiKeys",
+          "apiModel",
+          "customPrompt",
+        ],
         (settings) => {
           // Get API key for the selected provider
           const apiKey =
@@ -152,6 +159,7 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
               action: "aiSearchBookmarks",
               query,
               settings: settings,
+              customPrompt: settings.customPrompt,
             },
             (response) => {
               statusDiv.textContent = "";
