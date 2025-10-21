@@ -22,9 +22,32 @@ function loadSettings() {
     // Load AI settings
     if (data.ollamaUrl) document.getElementById('ollamaUrl').value = data.ollamaUrl;
     // ollamaModel will be loaded from the models list
-    if (data.apiProvider) document.getElementById('apiProvider').value = data.apiProvider;
+    if (data.apiProvider) {
+      document.getElementById('apiProvider').value = data.apiProvider;
+      // Trigger change to load models
+      document.getElementById('apiProvider').dispatchEvent(new Event('change'));
+      
+      // Load saved model
+      setTimeout(() => {
+        const modelSelect = document.getElementById('apiModelSelect');
+        const modelCustom = document.getElementById('apiModelCustom');
+        
+        if (data.apiModel) {
+          // Check if it's in the dropdown
+          const optionExists = Array.from(modelSelect.options).some(opt => opt.value === data.apiModel);
+          
+          if (optionExists) {
+            modelSelect.value = data.apiModel;
+          } else {
+            // It's a custom model
+            modelSelect.value = 'custom';
+            modelCustom.style.display = 'block';
+            modelCustom.value = data.apiModel;
+          }
+        }
+      }, 100);
+    }
     if (data.apiKey) document.getElementById('apiKey').value = data.apiKey;
-    if (data.apiModel) document.getElementById('apiModel').value = data.apiModel;
   });
 }
 
@@ -104,7 +127,12 @@ document.getElementById('saveBtn').addEventListener('click', () => {
       // Save API settings, clear Ollama
       settings.apiProvider = document.getElementById('apiProvider').value;
       settings.apiKey = document.getElementById('apiKey').value.trim();
-      settings.apiModel = document.getElementById('apiModel').value.trim();
+      
+      // Get model - either from dropdown or custom input
+      const modelSelect = document.getElementById('apiModelSelect').value;
+      const modelCustom = document.getElementById('apiModelCustom').value.trim();
+      settings.apiModel = modelSelect === 'custom' ? modelCustom : modelSelect;
+      
       settings.ollamaUrl = '';
       settings.ollamaModel = '';
     } else {
@@ -180,10 +208,131 @@ const providerInstructions = {
   }
 };
 
-// Show info modal when complex provider is selected
+// Model options for each provider
+const providerModels = {
+  openai: [
+    { value: 'gpt-4', label: 'GPT-4 (Recommended)' },
+    { value: 'gpt-4-turbo', label: 'GPT-4 Turbo' },
+    { value: 'gpt-3.5-turbo', label: 'GPT-3.5 Turbo (Default)' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  anthropic: [
+    { value: 'claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet (Recommended)' },
+    { value: 'claude-3-haiku-20240307', label: 'Claude 3 Haiku (Default)' },
+    { value: 'claude-3-opus-20240229', label: 'Claude 3 Opus' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  google: [
+    { value: 'gemini-pro', label: 'Gemini Pro (Default)' },
+    { value: 'gemini-1.5-pro', label: 'Gemini 1.5 Pro' },
+    { value: 'gemini-1.5-flash', label: 'Gemini 1.5 Flash' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  xai: [
+    { value: 'grok-beta', label: 'Grok Beta (Default)' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  groq: [
+    { value: 'mixtral-8x7b-32768', label: 'Mixtral 8x7B (Default)' },
+    { value: 'llama-3.1-70b-versatile', label: 'Llama 3.1 70B' },
+    { value: 'llama-3.1-8b-instant', label: 'Llama 3.1 8B' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  together: [
+    { value: 'mistralai/Mixtral-8x7B-Instruct-v0.1', label: 'Mixtral 8x7B (Default)' },
+    { value: 'meta-llama/Llama-3-70b-chat-hf', label: 'Llama 3 70B' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  fireworks: [
+    { value: 'accounts/fireworks/models/llama-v3p1-8b-instruct', label: 'Llama 3.1 8B (Default)' },
+    { value: 'accounts/fireworks/models/llama-v3p1-70b-instruct', label: 'Llama 3.1 70B' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  deepseek: [
+    { value: 'deepseek-chat', label: 'DeepSeek Chat (Default)' },
+    { value: 'deepseek-coder', label: 'DeepSeek Coder' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  perplexity: [
+    { value: 'llama-3.1-sonar-small-128k-online', label: 'Sonar Small (Default)' },
+    { value: 'llama-3.1-sonar-large-128k-online', label: 'Sonar Large' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  cohere: [
+    { value: 'command', label: 'Command (Default)' },
+    { value: 'command-light', label: 'Command Light' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  mistral: [
+    { value: 'mistral-tiny', label: 'Mistral Tiny (Default)' },
+    { value: 'mistral-small', label: 'Mistral Small' },
+    { value: 'mistral-medium', label: 'Mistral Medium' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  ai21: [
+    { value: 'jamba-instruct', label: 'Jamba Instruct (Default)' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  huggingface: [
+    { value: 'mistralai/Mistral-7B-Instruct-v0.2', label: 'Mistral 7B (Default)' },
+    { value: 'meta-llama/Llama-2-7b-chat-hf', label: 'Llama 2 7B' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  anyscale: [
+    { value: 'meta-llama/Llama-2-7b-chat-hf', label: 'Llama 2 7B (Default)' },
+    { value: 'meta-llama/Llama-2-13b-chat-hf', label: 'Llama 2 13B' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  openrouter: [
+    { value: 'meta-llama/llama-3.1-8b-instruct:free', label: 'Llama 3.1 8B Free (Default)' },
+    { value: 'google/gemini-pro-1.5', label: 'Gemini Pro 1.5' },
+    { value: 'anthropic/claude-3-haiku', label: 'Claude 3 Haiku' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  novita: [
+    { value: 'meta-llama/llama-3.1-8b-instruct', label: 'Llama 3.1 8B (Default)' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  lepton: [
+    { value: 'llama2-7b', label: 'Llama 2 7B (Default)' },
+    { value: 'custom', label: '✏️ Custom Model...' }
+  ],
+  azure: [
+    { value: 'custom', label: '✏️ Enter your deployment endpoint' }
+  ],
+  cloudflare: [
+    { value: 'custom', label: '✏️ Enter your account ID' }
+  ]
+};
+
+// Update model dropdown when provider changes
 document.getElementById('apiProvider').addEventListener('change', (e) => {
   const provider = e.target.value;
+  const modelSelect = document.getElementById('apiModelSelect');
+  const modelCustom = document.getElementById('apiModelCustom');
   
+  // Reset
+  modelSelect.innerHTML = '<option value="">Select model...</option>';
+  modelCustom.style.display = 'none';
+  modelCustom.value = '';
+  
+  if (provider && providerModels[provider]) {
+    // Populate model options
+    providerModels[provider].forEach(model => {
+      const option = document.createElement('option');
+      option.value = model.value;
+      option.textContent = model.label;
+      modelSelect.appendChild(option);
+    });
+    
+    // Select first non-custom option by default
+    const defaultModel = providerModels[provider].find(m => m.value !== 'custom');
+    if (defaultModel) {
+      modelSelect.value = defaultModel.value;
+    }
+  }
+  
+  // Show info modal for complex providers
   if (providerInstructions[provider]) {
     const modal = document.getElementById('infoModal');
     const modalTitle = document.getElementById('modalTitle');
@@ -193,6 +342,19 @@ document.getElementById('apiProvider').addEventListener('change', (e) => {
     modalBody.innerHTML = providerInstructions[provider].body;
     
     modal.classList.add('active');
+  }
+});
+
+// Show custom input when "Custom Model" is selected
+document.getElementById('apiModelSelect').addEventListener('change', (e) => {
+  const modelCustom = document.getElementById('apiModelCustom');
+  
+  if (e.target.value === 'custom') {
+    modelCustom.style.display = 'block';
+    modelCustom.focus();
+  } else {
+    modelCustom.style.display = 'none';
+    modelCustom.value = '';
   }
 });
 
