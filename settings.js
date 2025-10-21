@@ -1248,55 +1248,86 @@ function closePromptEditor() {
   promptScreen.style.display = "none";
 }
 
-function loadPromptIntoEditor(promptText) {
-  const editorArea = document.getElementById("promptEditorArea");
-
-  // Split prompt by {SEARCH} placeholder
-  const parts = promptText.split("{SEARCH}");
-
-  // Clear editor
-  editorArea.innerHTML = "";
-
-  // Add first part as text
-  if (parts[0]) {
-    const textNode = document.createTextNode(parts[0]);
-    editorArea.appendChild(textNode);
-  }
-
-  // Add draggable {SEARCH} button
-  const searchBtn = document.createElement("span");
-  searchBtn.className = "search-placeholder";
-  searchBtn.textContent = "🔍 search word";
-  searchBtn.draggable = true;
-  searchBtn.contentEditable = false;
+function createDraggablePlaceholder(text, placeholder, icon) {
+  const btn = document.createElement("span");
+  btn.className = "search-placeholder";
+  btn.textContent = `${icon} ${text}`;
+  btn.draggable = true;
+  btn.contentEditable = false;
+  btn.dataset.placeholder = placeholder;
 
   // Prevent deletion and editing
-  searchBtn.addEventListener("keydown", (e) => {
+  btn.addEventListener("keydown", (e) => {
     e.preventDefault();
   });
 
-  searchBtn.addEventListener("mousedown", (e) => {
-    // Prevent text selection
+  btn.addEventListener("mousedown", (e) => {
     e.preventDefault();
   });
 
   // Drag events
-  searchBtn.addEventListener("dragstart", (e) => {
-    searchBtn.classList.add("dragging");
+  btn.addEventListener("dragstart", (e) => {
+    btn.classList.add("dragging");
     e.dataTransfer.effectAllowed = "move";
-    e.dataTransfer.setData("text/plain", "{SEARCH}");
+    e.dataTransfer.setData("text/plain", placeholder);
   });
 
-  searchBtn.addEventListener("dragend", () => {
-    searchBtn.classList.remove("dragging");
+  btn.addEventListener("dragend", () => {
+    btn.classList.remove("dragging");
   });
 
-  editorArea.appendChild(searchBtn);
+  return btn;
+}
 
-  // Add remaining text
-  if (parts[1]) {
-    const textNode = document.createTextNode(parts[1]);
-    editorArea.appendChild(textNode);
+function loadPromptIntoEditor(promptText) {
+  const editorArea = document.getElementById("promptEditorArea");
+
+  // Clear editor
+  editorArea.innerHTML = "";
+
+  // Process text and replace placeholders with buttons
+  let remainingText = promptText;
+  
+  while (remainingText.length > 0) {
+    // Find next placeholder
+    const searchIndex = remainingText.indexOf("{SEARCH}");
+    const bookmarksIndex = remainingText.indexOf("[BOOKMARKS_WILL_BE_INSERTED_HERE]");
+    
+    let nextIndex = -1;
+    let nextPlaceholder = null;
+    
+    // Determine which placeholder comes first
+    if (searchIndex !== -1 && (bookmarksIndex === -1 || searchIndex < bookmarksIndex)) {
+      nextIndex = searchIndex;
+      nextPlaceholder = "search";
+    } else if (bookmarksIndex !== -1) {
+      nextIndex = bookmarksIndex;
+      nextPlaceholder = "bookmarks";
+    }
+    
+    if (nextIndex === -1) {
+      // No more placeholders, add remaining text
+      if (remainingText) {
+        editorArea.appendChild(document.createTextNode(remainingText));
+      }
+      break;
+    }
+    
+    // Add text before placeholder
+    if (nextIndex > 0) {
+      editorArea.appendChild(document.createTextNode(remainingText.substring(0, nextIndex)));
+    }
+    
+    // Add placeholder button
+    if (nextPlaceholder === "search") {
+      const searchBtn = createDraggablePlaceholder("search word", "{SEARCH}", "🔍");
+      editorArea.appendChild(searchBtn);
+      remainingText = remainingText.substring(nextIndex + "{SEARCH}".length);
+    } else {
+      const bookmarksBtn = createDraggablePlaceholder("bookmarks list", "[BOOKMARKS_WILL_BE_INSERTED_HERE]", "📚");
+      editorArea.appendChild(bookmarksBtn);
+      remainingText = remainingText.substring(nextIndex + "[BOOKMARKS_WILL_BE_INSERTED_HERE]".length);
+    }
   }
 
   // Setup drop zone
@@ -1349,7 +1380,9 @@ function getPromptFromEditor() {
       node.classList &&
       node.classList.contains("search-placeholder")
     ) {
-      promptText += "{SEARCH}";
+      // Use the data-placeholder attribute to get the correct placeholder
+      const placeholder = node.dataset.placeholder;
+      promptText += placeholder || "{SEARCH}";
     } else if (node.textContent) {
       promptText += node.textContent;
     }
