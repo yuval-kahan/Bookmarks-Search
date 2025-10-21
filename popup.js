@@ -1,3 +1,17 @@
+// Load Use Prompt state
+function loadUsePromptState() {
+  chrome.storage.local.get(['usePrompt'], (data) => {
+    const usePrompt = data.usePrompt !== undefined ? data.usePrompt : true;
+    document.getElementById('usePromptCheckbox').checked = usePrompt;
+  });
+}
+
+// Save Use Prompt state
+function saveUsePromptState() {
+  const usePrompt = document.getElementById('usePromptCheckbox').checked;
+  chrome.storage.local.set({ usePrompt: usePrompt });
+}
+
 // Load and display current search mode
 function updateSearchModeIndicator() {
   chrome.storage.local.get(
@@ -73,8 +87,14 @@ document.getElementById("settingsBtn").addEventListener("click", () => {
   window.location.href = "settings.html";
 });
 
+// Use Prompt checkbox event listener
+document.getElementById('usePromptCheckbox').addEventListener('change', saveUsePromptState);
+
 // Update indicator on load
 updateSearchModeIndicator();
+
+// Load Use Prompt state on page load
+loadUsePromptState();
 
 // Track if search is in progress
 let searchInProgress = false;
