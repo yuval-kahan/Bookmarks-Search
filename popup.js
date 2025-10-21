@@ -96,6 +96,49 @@ updateSearchModeIndicator();
 // Load Use Prompt state on page load
 loadUsePromptState();
 
+// State management functions
+function savePopupState(state) {
+  chrome.storage.local.set({ popupState: state });
+}
+
+function restorePopupState() {
+  chrome.storage.local.get(['popupState'], (data) => {
+    if (data.popupState) {
+      const state = data.popupState;
+      
+      // Restore query
+      if (state.query) {
+        document.getElementById('query').value = state.query;
+        autoResizeTextarea();
+      }
+      
+      // Restore results
+      if (state.results && state.results.length > 0) {
+        displayResults(state.results);
+      }
+      
+      // Restore search status
+      if (state.isSearching) {
+        document.getElementById('status').textContent = 'Searching with AI...';
+        document.getElementById('searchBtn').disabled = true;
+        document.getElementById('searchBtn').style.opacity = '0.6';
+        document.getElementById('stopBtn').classList.add('visible');
+        searchInProgress = true;
+      }
+      
+      // Restore error
+      if (state.error) {
+        const errorDiv = document.getElementById('error');
+        errorDiv.textContent = state.error;
+        errorDiv.className = 'error';
+      }
+    }
+  });
+}
+
+// Restore state on load
+restorePopupState();
+
 // Auto-resize textarea
 function autoResizeTextarea() {
   const textarea = document.getElementById('query');
@@ -153,6 +196,14 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
   stopBtn.classList.add("visible");
   searchBtn.disabled = true;
   searchBtn.style.opacity = "0.6";
+
+  // Save state - search started
+  savePopupState({
+    query: query,
+    isSearching: true,
+    results: [],
+    error: null
+  });
 
   // Get saved search mode
   chrome.storage.local.get(["searchMode"], (data) => {
@@ -247,9 +298,16 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
                 stopBtn.classList.remove("visible");
                 searchBtn.disabled = false;
                 searchBtn.style.opacity = "1";
-                errorDiv.textContent =
-                  "Error: " + chrome.runtime.lastError.message;
+                const errorMsg = "Error: " + chrome.runtime.lastError.message;
+                errorDiv.textContent = errorMsg;
                 errorDiv.className = "error";
+                // Save error state
+                savePopupState({
+                  query: query,
+                  isSearching: false,
+                  results: [],
+                  error: errorMsg
+                });
                 return;
               }
 
@@ -258,8 +316,16 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
                 stopBtn.classList.remove("visible");
                 searchBtn.disabled = false;
                 searchBtn.style.opacity = "1";
-                errorDiv.textContent = "AI Error: " + response.error;
+                const errorMsg = "AI Error: " + response.error;
+                errorDiv.textContent = errorMsg;
                 errorDiv.className = "error";
+                // Save error state
+                savePopupState({
+                  query: query,
+                  isSearching: false,
+                  results: [],
+                  error: errorMsg
+                });
                 return;
               }
 
@@ -268,8 +334,16 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
                 stopBtn.classList.remove("visible");
                 searchBtn.disabled = false;
                 searchBtn.style.opacity = "1";
-                errorDiv.textContent = "No response from AI";
+                const errorMsg = "No response from AI";
+                errorDiv.textContent = errorMsg;
                 errorDiv.className = "error";
+                // Save error state
+                savePopupState({
+                  query: query,
+                  isSearching: false,
+                  results: [],
+                  error: errorMsg
+                });
                 return;
               }
 
@@ -295,11 +369,25 @@ function displayResults(results) {
 
   if (abortSearch) {
     list.innerHTML = "<li style='color: #e53e3e;'>Search cancelled</li>";
+    // Save cancelled state
+    savePopupState({
+      query: document.getElementById('query').value,
+      isSearching: false,
+      results: [],
+      error: 'Search cancelled'
+    });
     return;
   }
 
   if (results.length === 0) {
     list.innerHTML = "<li>No bookmarks found</li>";
+    // Save no results state
+    savePopupState({
+      query: document.getElementById('query').value,
+      isSearching: false,
+      results: [],
+      error: null
+    });
     return;
   }
 
@@ -311,6 +399,14 @@ function displayResults(results) {
     link.textContent = item.title || item.url;
     li.appendChild(link);
     list.appendChild(li);
+  });
+  
+  // Save successful results state
+  savePopupState({
+    query: document.getElementById('query').value,
+    isSearching: false,
+    results: results,
+    error: null
   });
 }
 
