@@ -1256,11 +1256,6 @@ function createDraggablePlaceholder(text, placeholder, icon) {
   btn.contentEditable = false;
   btn.dataset.placeholder = placeholder;
 
-  // Prevent deletion and editing
-  btn.addEventListener("keydown", (e) => {
-    e.preventDefault();
-  });
-
   // Drag events
   btn.addEventListener("dragstart", (e) => {
     btn.classList.add("dragging");
@@ -1328,6 +1323,55 @@ function loadPromptIntoEditor(promptText) {
 
   // Setup drop zone
   setupDropZone(editorArea);
+  
+  // Add protection for placeholder buttons
+  protectPlaceholders(editorArea);
+}
+
+function protectPlaceholders(editorArea) {
+  // Prevent deletion of placeholder buttons
+  editorArea.addEventListener("keydown", (e) => {
+    // Allow normal editing
+    if (!e.key || e.key.length > 1 && e.key !== "Backspace" && e.key !== "Delete") {
+      return;
+    }
+
+    // Check if selection includes a placeholder
+    const selection = window.getSelection();
+    if (!selection.rangeCount) return;
+
+    const range = selection.getRangeAt(0);
+    const placeholders = editorArea.querySelectorAll(".search-placeholder");
+    
+    // Check if any placeholder is in the selection
+    let hasPlaceholder = false;
+    placeholders.forEach((placeholder) => {
+      if (range.intersectsNode(placeholder)) {
+        hasPlaceholder = true;
+      }
+    });
+
+    // If trying to delete and selection includes placeholder, prevent it
+    if (hasPlaceholder && (e.key === "Backspace" || e.key === "Delete")) {
+      e.preventDefault();
+      e.stopPropagation();
+      
+      // Show a brief message
+      const existingMsg = editorArea.querySelector(".protection-message");
+      if (!existingMsg) {
+        const msg = document.createElement("div");
+        msg.className = "protection-message";
+        msg.textContent = "⚠️ Cannot delete placeholder buttons";
+        msg.style.cssText = "position: absolute; top: 10px; right: 10px; background: #fff3cd; padding: 8px 12px; border-radius: 6px; font-size: 12px; border-left: 3px solid #ffc107; z-index: 1000;";
+        editorArea.style.position = "relative";
+        editorArea.appendChild(msg);
+        
+        setTimeout(() => {
+          msg.remove();
+        }, 2000);
+      }
+    }
+  });
 }
 
 function setupDropZone(editorArea) {
@@ -1484,9 +1528,40 @@ function savePrompt() {
 }
 
 function resetPromptToDefault() {
-  if (confirm("Are you sure you want to reset the prompt to default?")) {
+  // Use custom modal instead of browser confirm
+  const modal = document.getElementById("infoModal");
+  const modalTitle = document.getElementById("modalTitle");
+  const modalBody = document.getElementById("modalBody");
+  const modalOkBtn = document.getElementById("modalOkBtn");
+
+  modalTitle.textContent = "🔄 Reset to Default";
+  modalBody.innerHTML = `
+    <strong>Are you sure you want to reset the prompt to default?</strong><br><br>
+    This will replace your current prompt with the default template.<br><br>
+    <span style="color: #e53e3e;">This action cannot be undone.</span>
+  `;
+
+  // Change OK button to confirm action
+  modalOkBtn.textContent = "Yes, Reset";
+  modalOkBtn.style.background = "#e53e3e";
+
+  // Show modal
+  modal.classList.add("active");
+
+  // Handle confirmation
+  const handleConfirm = () => {
     loadPromptIntoEditor(DEFAULT_PROMPT);
-  }
+    modal.classList.remove("active");
+    modalOkBtn.removeEventListener("click", handleConfirm);
+    // Restore original button
+    modalOkBtn.textContent = "OK";
+    modalOkBtn.style.background = "";
+  };
+
+  // Remove old listeners and add new one
+  const newBtn = modalOkBtn.cloneNode(true);
+  modalOkBtn.parentNode.replaceChild(newBtn, modalOkBtn);
+  newBtn.addEventListener("click", handleConfirm);
 }
 
 // Event Listeners for Prompt Editor
