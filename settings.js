@@ -830,7 +830,7 @@ document.getElementById('installModelBtn').addEventListener('click', () => {
     
     <strong>2. Run this command:</strong><br>
     <code style="display: block; background: #f0f0f0; padding: 8px; margin: 8px 0; border-radius: 4px; user-select: all;">ollama pull llama3.1:8b</code>
-    <button onclick="navigator.clipboard.writeText('ollama pull llama3.1:8b'); this.textContent='✓ Copied!'; setTimeout(() => this.textContent='📋 Copy Command', 2000)" 
+    <button id="copyCommandBtn" 
             style="padding: 6px 12px; background: #667eea; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; margin-bottom: 10px;">
       📋 Copy Command
     </button><br>
@@ -848,6 +848,31 @@ document.getElementById('installModelBtn').addEventListener('click', () => {
   `;
   
   modal.classList.add('active');
+  
+  // Add event listener to copy button after it's created
+  setTimeout(() => {
+    const copyBtn = document.getElementById('copyCommandBtn');
+    if (copyBtn) {
+      copyBtn.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText('ollama pull llama3.1:8b');
+          copyBtn.textContent = '✓ Copied!';
+          copyBtn.style.background = '#48bb78';
+          setTimeout(() => {
+            copyBtn.textContent = '📋 Copy Command';
+            copyBtn.style.background = '#667eea';
+          }, 2000);
+        } catch (err) {
+          copyBtn.textContent = '✗ Failed';
+          copyBtn.style.background = '#e53e3e';
+          setTimeout(() => {
+            copyBtn.textContent = '📋 Copy Command';
+            copyBtn.style.background = '#667eea';
+          }, 2000);
+        }
+      });
+    }
+  }, 100);
 });
 
 // Load settings on page open
