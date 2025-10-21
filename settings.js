@@ -49,6 +49,9 @@ document.querySelectorAll('input[name="searchMode"]').forEach((radio) => {
   });
 });
 
+// Track selected AI provider (Ollama or API)
+let selectedAIProvider = null;
+
 // Collapsible functionality
 document.querySelectorAll('.collapsible-header').forEach((header) => {
   header.addEventListener('click', () => {
@@ -56,15 +59,24 @@ document.querySelectorAll('.collapsible-header').forEach((header) => {
     const content = document.getElementById(targetId);
     const parentCollapsible = header.parentElement;
 
-    // Toggle active state
+    // Toggle active state (open/close)
     header.classList.toggle('active');
     content.classList.toggle('active');
     
-    // Toggle selected state on parent
-    if (content.classList.contains('active')) {
-      parentCollapsible.classList.add('selected');
-    } else {
-      parentCollapsible.classList.remove('selected');
+    // For AI settings (Ollama and API), handle selection
+    if (targetId === 'ollamaContent' || targetId === 'apiContent') {
+      // Remove selected from all AI collapsibles
+      document.querySelectorAll('#aiSettings .collapsible').forEach(c => {
+        c.classList.remove('selected');
+      });
+      
+      // If opening, mark as selected
+      if (content.classList.contains('active')) {
+        parentCollapsible.classList.add('selected');
+        selectedAIProvider = targetId === 'ollamaContent' ? 'ollama' : 'api';
+      } else {
+        selectedAIProvider = null;
+      }
     }
   });
 });
@@ -76,13 +88,34 @@ document.getElementById('saveBtn').addEventListener('click', () => {
   
   const settings = {
     searchMode: searchMode,
-    simpleSearchType: simpleSearchType,
-    ollamaUrl: document.getElementById('ollamaUrl').value.trim(),
-    ollamaModel: document.getElementById('ollamaModel').value.trim(),
-    apiProvider: document.getElementById('apiProvider').value,
-    apiKey: document.getElementById('apiKey').value.trim(),
-    apiModel: document.getElementById('apiModel').value.trim()
+    simpleSearchType: simpleSearchType
   };
+  
+  // Save AI settings based on what's selected
+  if (searchMode === 'ai') {
+    if (selectedAIProvider === 'ollama') {
+      // Save Ollama settings, clear API
+      settings.ollamaUrl = document.getElementById('ollamaUrl').value.trim();
+      settings.ollamaModel = document.getElementById('ollamaModel').value.trim();
+      settings.apiProvider = '';
+      settings.apiKey = '';
+      settings.apiModel = '';
+    } else if (selectedAIProvider === 'api') {
+      // Save API settings, clear Ollama
+      settings.apiProvider = document.getElementById('apiProvider').value;
+      settings.apiKey = document.getElementById('apiKey').value.trim();
+      settings.apiModel = document.getElementById('apiModel').value.trim();
+      settings.ollamaUrl = '';
+      settings.ollamaModel = '';
+    } else {
+      // Nothing selected, save both (for backward compatibility)
+      settings.ollamaUrl = document.getElementById('ollamaUrl').value.trim();
+      settings.ollamaModel = document.getElementById('ollamaModel').value.trim();
+      settings.apiProvider = document.getElementById('apiProvider').value;
+      settings.apiKey = document.getElementById('apiKey').value.trim();
+      settings.apiModel = document.getElementById('apiModel').value.trim();
+    }
+  }
 
   chrome.storage.local.set(settings, () => {
     const saveStatus = document.getElementById('saveStatus');
@@ -447,4 +480,15 @@ setTimeout(() => {
   if (document.getElementById('ollamaContent').classList.contains('active')) {
     loadOllamaModels();
   }
+  
+  // Set initial selected provider based on saved settings
+  chrome.storage.local.get(['ollamaModel', 'apiProvider'], (data) => {
+    if (data.apiProvider) {
+      selectedAIProvider = 'api';
+      document.querySelector('[data-target="apiContent"]').parentElement.classList.add('selected');
+    } else if (data.ollamaModel) {
+      selectedAIProvider = 'ollama';
+      document.querySelector('[data-target="ollamaContent"]').parentElement.classList.add('selected');
+    }
+  });
 }, 500);
