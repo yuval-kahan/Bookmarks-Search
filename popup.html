@@ -841,17 +841,8 @@
       <div class="history-title">📜 Search History</div>
     </div>
     
-    <!-- Search and Filter Controls -->
+    <!-- Filter Controls -->
     <div class="history-controls">
-      <!-- Search Bar -->
-      <div class="search-section">
-        <input type="text" id="historySearch" placeholder="Search history...">
-        <select id="searchMode">
-          <option value="fuzzy">Fuzzy</option>
-          <option value="exact">Exact Match</option>
-        </select>
-      </div>
-      
       <!-- Quick Filters -->
       <div class="filter-section">
         <label>Quick Filter:</label>
@@ -884,8 +875,15 @@
       </div>
     </div>
     
-    <!-- Delete All Button (in white history area) -->
+    <!-- Search Bar and Delete All Button (in white area) -->
     <div class="delete-all-container">
+      <div class="search-section">
+        <input type="text" id="historySearch" placeholder="Search history...">
+        <select id="searchMode">
+          <option value="fuzzy">Fuzzy</option>
+          <option value="exact">Exact Match</option>
+        </select>
+      </div>
       <button id="deleteAllHistory" class="delete-all-btn">🗑️ Delete All</button>
     </div>
     
