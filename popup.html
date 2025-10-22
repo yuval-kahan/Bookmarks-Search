@@ -390,6 +390,18 @@
       margin-bottom: 15px;
       font-size: 12px;
       border-left: 3px solid #667eea;
+      transition: all 0.3s ease;
+      user-select: none;
+    }
+    
+    .search-mode-indicator[style*="cursor: pointer"]:hover {
+      background: linear-gradient(135deg, #e8f0ff 0%, #d8e7ff 100%);
+      border-left-color: #5568d3;
+      transform: translateX(2px);
+    }
+    
+    .search-mode-indicator[style*="cursor: pointer"]:active {
+      transform: translateX(0);
     }
     
     .mode-icon {

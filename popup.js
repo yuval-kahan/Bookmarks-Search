@@ -327,6 +327,10 @@ function updateSearchModeIndicator() {
       if (searchMode === "simple") {
         const searchType = data.simpleSearchType || "exact";
 
+        // Make indicator clickable in Simple mode
+        indicator.style.cursor = 'pointer';
+        indicator.title = 'Click to toggle between Exact Match and Fuzzy Search';
+
         if (searchType === "exact") {
           modeIcon.textContent = "🎯";
           modeText.innerHTML = "Mode: <strong>Simple - Exact Match</strong>";
@@ -335,6 +339,9 @@ function updateSearchModeIndicator() {
           modeText.innerHTML = "Mode: <strong>Simple - Fuzzy Search</strong>";
         }
       } else {
+        // AI mode - not clickable
+        indicator.style.cursor = 'default';
+        indicator.title = '';
         // AI Search mode
         const ollamaModel = data.ollamaModel;
         const apiProvider = data.apiProvider;
@@ -417,10 +424,34 @@ updateSearchModeIndicator();
 // Update AI features state based on search mode
 updateAIFeaturesState();
 
+// Toggle Simple search type when clicking on mode indicator
+document.getElementById('searchModeIndicator').addEventListener('click', () => {
+  chrome.storage.local.get(['searchMode', 'simpleSearchType'], (data) => {
+    const searchMode = data.searchMode || 'simple';
+    
+    // Only toggle if in Simple mode
+    if (searchMode === 'simple') {
+      const currentType = data.simpleSearchType || 'exact';
+      const newType = currentType === 'exact' ? 'fuzzy' : 'exact';
+      
+      // Save new type
+      chrome.storage.local.set({ simpleSearchType: newType }, () => {
+        // Update indicator
+        updateSearchModeIndicator();
+      });
+    }
+  });
+});
+
 // Listen for storage changes (when user changes mode in settings)
 chrome.storage.onChanged.addListener((changes, namespace) => {
   if (namespace === 'local' && changes.searchMode) {
     updateAIFeaturesState();
+    updateSearchModeIndicator();
+  }
+  
+  // Also update indicator when simpleSearchType changes
+  if (namespace === 'local' && changes.simpleSearchType) {
     updateSearchModeIndicator();
   }
 });
