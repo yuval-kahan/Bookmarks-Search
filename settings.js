@@ -1813,3 +1813,31 @@ document.getElementById('batchBackBtn').addEventListener('click', closeBatchSett
 
 // Batch save button
 document.getElementById('batchSaveBtn').addEventListener('click', saveBatchSettings);
+
+// GitHub icon functionality
+document.getElementById('githubIcon').addEventListener('click', () => {
+  const modal = document.getElementById('githubModal');
+  modal.style.display = 'flex';
+});
+
+// GitHub modal cancel button
+document.getElementById('githubCancelBtn').addEventListener('click', () => {
+  const modal = document.getElementById('githubModal');
+  modal.style.display = 'none';
+});
+
+// GitHub modal OK button
+document.getElementById('githubOkBtn').addEventListener('click', () => {
+  const modal = document.getElementById('githubModal');
+  modal.style.display = 'none';
+  
+  // Open GitHub in new tab
+  chrome.tabs.create({ url: 'https://github.com/yuval-kahan/Bookmarks-Search' });
+});
+
+// Close modal on overlay click
+document.getElementById('githubModal').addEventListener('click', (e) => {
+  if (e.target.id === 'githubModal') {
+    e.target.style.display = 'none';
+  }
+});

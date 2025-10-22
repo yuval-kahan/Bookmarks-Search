@@ -77,6 +77,15 @@
       transform: translateX(-3px);
     }
     
+    #githubIcon {
+      color: #333;
+    }
+    
+    #githubIcon:hover {
+      color: #667eea;
+      transform: scale(1.1);
+    }
+    
     .search-modes {
       display: flex;
       gap: 10px;
@@ -790,7 +799,12 @@
   <div class="container">
     <div class="header">
       <div class="back-icon" id="backBtn" title="Back">←</div>
-      <h1>⚙️ Settings</h1>
+      <h1>
+        <svg id="githubIcon" style="cursor: pointer; margin-right: 8px; width: 20px; height: 20px; transition: transform 0.2s ease; vertical-align: middle;" title="View on GitHub" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+        </svg>
+        ⚙️ Settings
+      </h1>
       <div style="width: 29px;"></div>
     </div>
     
@@ -1104,6 +1118,27 @@
       
       <div class="prompt-editor-buttons" style="margin-top: 20px;">
         <button class="prompt-save-btn" id="batchSaveBtn"> Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- GitHub Redirect Modal -->
+  <div id="githubModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 25px; border-radius: 12px; max-width: 320px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);">
+      <div style="font-size: 16px; font-weight: 600; color: #667eea; margin-bottom: 15px; text-align: center;">
+        🔗 External Link
+      </div>
+      <div style="font-size: 14px; color: #555; margin-bottom: 20px; line-height: 1.6; text-align: center;">
+        This will redirect you to GitHub.<br>
+        Do you want to continue?
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <button id="githubCancelBtn" style="flex: 1; padding: 10px; background: #f0f0f0; color: #666; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+          Cancel
+        </button>
+        <button id="githubOkBtn" style="flex: 1; padding: 10px; background: #667eea; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+          OK
+        </button>
       </div>
     </div>
   </div>

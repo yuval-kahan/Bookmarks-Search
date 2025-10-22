@@ -852,6 +852,11 @@ chrome.storage.local.get(['progressViewMode'], (data) => {
 
 // Toggle progress view
 document.getElementById('progressToggleIcon').addEventListener('click', () => {
+  // Only allow toggle if search is actually in progress
+  if (!searchInProgress) {
+    return; // Do nothing if no search is active
+  }
+  
   // Toggle mode
   progressViewMode = progressViewMode === 'batch' ? 'percentage' : 'batch';
   
@@ -919,3 +924,18 @@ function updateCleanButtonState(isSearching) {
   const cleanBtn = document.getElementById('cleanBtn');
   cleanBtn.disabled = isSearching;
 }
+
+// Initialize popup - hide progress indicator on load
+document.addEventListener('DOMContentLoaded', () => {
+  // Always hide batch progress when popup opens
+  const progressDiv = document.getElementById('batchProgress');
+  if (progressDiv) {
+    progressDiv.style.display = 'none';
+  }
+  
+  // Ensure searchInProgress is false on popup open
+  searchInProgress = false;
+  
+  // Ensure clean button is enabled
+  updateCleanButtonState(false);
+});
