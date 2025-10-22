@@ -137,7 +137,7 @@ Your response:`;
   const aiResponse = data.response.trim();
 
   if (aiResponse === "NONE") {
-    return [];
+    return { results: [], rawData: { sent: prompt, received: aiResponse } };
   }
 
   const indices = aiResponse.split(",").map((n) => parseInt(n.trim()) - 1);
@@ -145,7 +145,7 @@ Your response:`;
     .filter((i) => i >= 0 && i < allBookmarks.length)
     .map((i) => allBookmarks[i]);
 
-  return results;
+  return { results, rawData: { sent: prompt, received: aiResponse } };
 }
 
 // AI search using API providers
@@ -489,7 +489,7 @@ If no bookmarks match, return: NONE`;
   }
 
   if (aiResponse === "NONE") {
-    return [];
+    return { results: [], rawData: { sent: userPrompt, received: aiResponse } };
   }
 
   const indices = aiResponse.split(",").map((n) => parseInt(n.trim()) - 1);
@@ -497,7 +497,7 @@ If no bookmarks match, return: NONE`;
     .filter((i) => i >= 0 && i < allBookmarks.length)
     .map((i) => allBookmarks[i]);
 
-  return results;
+  return { results, rawData: { sent: userPrompt, received: aiResponse } };
 }
 
 // Fuzzy search algorithm (Levenshtein distance based)
@@ -856,7 +856,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
               throw new Error("No AI provider configured");
             }
 
-            sendResponse({ results });
+            sendResponse({ 
+              results: results.results || results, 
+              rawData: results.rawData || null 
+            });
           } catch (error) {
             sendResponse({ results: [], error: error.message });
           }

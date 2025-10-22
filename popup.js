@@ -1,3 +1,9 @@
+// RAW data storage for debugging
+let lastRawData = {
+  sent: null,
+  received: null
+};
+
 // IndexedDB for search history
 let db;
 const DB_NAME = 'SearchHistoryDB';
@@ -383,6 +389,12 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
             (response) => {
               statusDiv.textContent = "";
 
+              // Save RAW data if available
+              if (response && response.rawData) {
+                lastRawData.sent = response.rawData.sent;
+                lastRawData.received = response.rawData.received;
+              }
+
               if (abortSearch) {
                 displayResults([]);
                 return;
@@ -653,3 +665,39 @@ function displayHistoryDetail(historyItem) {
 document.getElementById('historyBtn').addEventListener('click', openHistoryScreen);
 document.getElementById('historyBackBtn').addEventListener('click', closeHistoryScreen);
 document.getElementById('historyDetailBackBtn').addEventListener('click', closeHistoryDetail);
+
+// RAW Data Modal functions
+function openRawModal() {
+  const modal = document.getElementById('rawModal');
+  const sentContent = document.getElementById('rawSentContent');
+  const receivedContent = document.getElementById('rawReceivedContent');
+  
+  if (lastRawData.sent) {
+    sentContent.textContent = lastRawData.sent;
+  } else {
+    sentContent.textContent = 'No data sent yet. Perform a search to see the data.';
+  }
+  
+  if (lastRawData.received) {
+    receivedContent.textContent = lastRawData.received;
+  } else {
+    receivedContent.textContent = 'No data received yet. Perform a search to see the data.';
+  }
+  
+  modal.classList.add('active');
+}
+
+function closeRawModal() {
+  document.getElementById('rawModal').classList.remove('active');
+}
+
+// Event listeners for RAW modal
+document.getElementById('rawBtn').addEventListener('click', openRawModal);
+document.getElementById('rawModalClose').addEventListener('click', closeRawModal);
+
+// Close modal on overlay click
+document.getElementById('rawModal').addEventListener('click', (e) => {
+  if (e.target.id === 'rawModal') {
+    closeRawModal();
+  }
+});

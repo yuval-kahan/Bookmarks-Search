@@ -157,6 +157,115 @@
       display: block;
     }
     
+    #rawBtn {
+      padding: 4px 8px;
+      background: #f0f0f0;
+      color: #666;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 5px;
+      display: inline-block;
+    }
+    
+    #rawBtn:hover {
+      background: #e0e0e0;
+      color: #333;
+      border-color: #999;
+    }
+    
+    .raw-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .raw-modal.active {
+      display: flex;
+    }
+    
+    .raw-modal-content {
+      background: white;
+      border-radius: 12px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    }
+    
+    .raw-modal-header {
+      padding: 15px 20px;
+      border-bottom: 2px solid #f0f0f0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .raw-modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #667eea;
+    }
+    
+    .raw-modal-close {
+      cursor: pointer;
+      font-size: 24px;
+      color: #999;
+      line-height: 1;
+      transition: color 0.2s ease;
+    }
+    
+    .raw-modal-close:hover {
+      color: #333;
+    }
+    
+    .raw-modal-body {
+      padding: 20px;
+      overflow-y: auto;
+      flex: 1;
+    }
+    
+    .raw-section {
+      margin-bottom: 20px;
+    }
+    
+    .raw-section-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .raw-section-content {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 6px;
+      border-left: 3px solid #667eea;
+      font-family: 'Courier New', monospace;
+      font-size: 11px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+      color: #333;
+    }
+    
     #status {
       margin-top: 10px;
       font-size: 12px;
@@ -433,9 +542,31 @@
       <button id="historyBtn">📜 History</button>
     </div>
     
+    <button id="rawBtn">RAW</button>
+    
     <div id="status"></div>
     <div id="error"></div>
     <ul id="results"></ul>
+  </div>
+  
+  <!-- RAW Data Modal -->
+  <div class="raw-modal" id="rawModal">
+    <div class="raw-modal-content">
+      <div class="raw-modal-header">
+        <div class="raw-modal-title">📤 RAW Data View</div>
+        <div class="raw-modal-close" id="rawModalClose">×</div>
+      </div>
+      <div class="raw-modal-body">
+        <div class="raw-section">
+          <div class="raw-section-title">📨 Sent to AI:</div>
+          <div class="raw-section-content" id="rawSentContent">No data sent yet</div>
+        </div>
+        <div class="raw-section">
+          <div class="raw-section-title">📥 Received from AI:</div>
+          <div class="raw-section-content" id="rawReceivedContent">No data received yet</div>
+        </div>
+      </div>
+    </div>
   </div>
   
   <!-- History Screen -->
