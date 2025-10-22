@@ -417,6 +417,168 @@
       color: #667eea;
     }
     
+    .dropdown-arrow {
+      font-size: 10px;
+      color: #667eea;
+      margin-left: auto;
+      transition: transform 0.3s ease;
+    }
+    
+    .dropdown-arrow.open {
+      transform: rotate(180deg);
+    }
+    
+    .model-dropdown {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+      z-index: 1000;
+      margin-top: 5px;
+      max-height: 300px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      animation: dropdownFadeIn 0.2s ease;
+    }
+    
+    @keyframes dropdownFadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+    
+    .model-dropdown-header {
+      padding: 10px 12px;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+      border-bottom: 1px solid #e0e7ff;
+      font-size: 12px;
+      font-weight: 600;
+      color: #667eea;
+    }
+    
+    .model-dropdown-list {
+      overflow-y: auto;
+      max-height: 250px;
+    }
+    
+    .model-dropdown-list::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .model-dropdown-list::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    .model-dropdown-list::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 3px;
+    }
+    
+    .model-dropdown-list::-webkit-scrollbar-thumb:hover {
+      background: #5568d3;
+    }
+    
+    .model-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border-bottom: 1px solid #f0f0f0;
+      font-size: 12px;
+    }
+    
+    .model-item:last-child {
+      border-bottom: none;
+    }
+    
+    .model-item:hover {
+      background: #f8f9ff;
+    }
+    
+    .model-item.active {
+      background: #f0f4ff;
+      font-weight: 600;
+      color: #667eea;
+    }
+    
+    .model-item.verifying {
+      opacity: 0.6;
+      cursor: wait;
+    }
+    
+    .model-item.disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+    
+    .model-name {
+      flex: 1;
+      color: #333;
+    }
+    
+    .model-item.active .model-name {
+      color: #667eea;
+    }
+    
+    .model-status {
+      margin-left: 8px;
+      font-size: 14px;
+    }
+    
+    .model-status.loading {
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    .model-status.success {
+      color: #48bb78;
+    }
+    
+    .model-status.error {
+      color: #e53e3e;
+    }
+    
+    .dropdown-loading {
+      padding: 20px;
+      text-align: center;
+      color: #667eea;
+      font-size: 12px;
+    }
+    
+    .dropdown-error {
+      padding: 20px;
+      text-align: center;
+      color: #e53e3e;
+      font-size: 12px;
+    }
+    
+    .dropdown-empty {
+      padding: 20px;
+      text-align: center;
+      color: #999;
+      font-size: 12px;
+    }
+    
     .deep-search-container,
     .pre-markdown-container,
     .use-prompt-container {
@@ -847,6 +1009,15 @@
     <div class="search-mode-indicator" id="searchModeIndicator">
       <span class="mode-icon">⚡</span>
       <span class="mode-text">Loading...</span>
+      <span class="dropdown-arrow" id="dropdownArrow" style="display: none;">▼</span>
+    </div>
+    
+    <!-- Model Selector Dropdown -->
+    <div class="model-dropdown" id="modelDropdown" style="display: none;">
+      <div class="model-dropdown-header">Select Model</div>
+      <div class="model-dropdown-list" id="modelDropdownList">
+        <!-- Models will be inserted here dynamically -->
+      </div>
     </div>
     
     <div class="search-box">

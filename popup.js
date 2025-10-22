@@ -4,6 +4,27 @@ let lastRawData = {
   received: null
 };
 
+// Provider model lists (for dropdown)
+const providerModels = {
+  openai: ['gpt-4', 'gpt-4-turbo', 'gpt-3.5-turbo'],
+  anthropic: ['claude-3-5-sonnet-20241022', 'claude-3-haiku-20240307', 'claude-3-opus-20240229'],
+  google: ['gemini-pro', 'gemini-1.5-pro', 'gemini-1.5-flash'],
+  xai: ['grok-beta'],
+  groq: ['mixtral-8x7b-32768', 'llama-3.1-70b-versatile', 'llama-3.1-8b-instant'],
+  together: ['mistralai/Mixtral-8x7B-Instruct-v0.1', 'meta-llama/Llama-3-70b-chat-hf'],
+  fireworks: ['accounts/fireworks/models/llama-v3p1-8b-instruct', 'accounts/fireworks/models/llama-v3p1-70b-instruct'],
+  deepseek: ['deepseek-chat', 'deepseek-coder'],
+  perplexity: ['llama-3.1-sonar-small-128k-online', 'llama-3.1-sonar-large-128k-online'],
+  cohere: ['command', 'command-light'],
+  mistral: ['mistral-tiny', 'mistral-small', 'mistral-medium'],
+  ai21: ['jamba-instruct'],
+  huggingface: ['mistralai/Mistral-7B-Instruct-v0.2', 'meta-llama/Llama-2-7b-chat-hf'],
+  anyscale: ['meta-llama/Llama-2-7b-chat-hf', 'meta-llama/Llama-2-13b-chat-hf'],
+  openrouter: ['meta-llama/llama-3.1-8b-instruct:free', 'google/gemini-pro-1.5', 'anthropic/claude-3-haiku'],
+  novita: ['meta-llama/llama-3.1-8b-instruct'],
+  lepton: ['llama2-7b']
+};
+
 // IndexedDB for search history
 let db;
 const DB_NAME = 'SearchHistoryDB';
@@ -316,11 +337,12 @@ function updateAIFeaturesState() {
 // Load and display current search mode
 function updateSearchModeIndicator() {
   chrome.storage.local.get(
-    ["searchMode", "simpleSearchType", "ollamaModel", "apiProvider"],
+    ["searchMode", "simpleSearchType", "ollamaModel", "apiProvider", "apiModel"],
     (data) => {
       const indicator = document.getElementById("searchModeIndicator");
       const modeIcon = indicator.querySelector(".mode-icon");
       const modeText = indicator.querySelector(".mode-text");
+      const dropdownArrow = document.getElementById("dropdownArrow");
 
       const searchMode = data.searchMode || "simple";
 
@@ -330,6 +352,9 @@ function updateSearchModeIndicator() {
         // Make indicator clickable in Simple mode
         indicator.style.cursor = 'pointer';
         indicator.title = 'Click to toggle between Exact Match and Fuzzy Search';
+        
+        // Hide dropdown arrow
+        dropdownArrow.style.display = 'none';
 
         if (searchType === "exact") {
           modeIcon.textContent = "🎯";
@@ -339,25 +364,29 @@ function updateSearchModeIndicator() {
           modeText.innerHTML = "Mode: <strong>Simple - Fuzzy Search</strong>";
         }
       } else {
-        // AI mode - not clickable
-        indicator.style.cursor = 'default';
-        indicator.title = '';
+        // AI mode - clickable to show dropdown
+        indicator.style.cursor = 'pointer';
+        indicator.title = 'Click to change model';
+        
+        // Show dropdown arrow
+        dropdownArrow.style.display = 'inline-block';
+        
         // AI Search mode
         const ollamaModel = data.ollamaModel;
         const apiProvider = data.apiProvider;
+        const apiModel = data.apiModel;
 
         if (apiProvider) {
           modeIcon.textContent = "🌐";
-          modeText.innerHTML = `Mode: <strong>AI - ${getProviderName(
-            apiProvider
-          )}</strong>`;
+          const modelDisplay = apiModel ? ` (${apiModel})` : '';
+          modeText.innerHTML = `Mode: <strong>AI - ${getProviderName(apiProvider)}${modelDisplay}</strong>`;
         } else if (ollamaModel) {
           modeIcon.textContent = "🦙";
           modeText.innerHTML = `Mode: <strong>AI - Ollama (${ollamaModel})</strong>`;
         } else {
           modeIcon.textContent = "🤖";
-          modeText.innerHTML =
-            "Mode: <strong>AI Search</strong> (not configured)";
+          modeText.innerHTML = "Mode: <strong>AI Search</strong> (not configured)";
+          dropdownArrow.style.display = 'none';
         }
       }
     }
@@ -424,13 +453,13 @@ updateSearchModeIndicator();
 // Update AI features state based on search mode
 updateAIFeaturesState();
 
-// Toggle Simple search type when clicking on mode indicator
+// Handle mode indicator click
 document.getElementById('searchModeIndicator').addEventListener('click', () => {
   chrome.storage.local.get(['searchMode', 'simpleSearchType'], (data) => {
     const searchMode = data.searchMode || 'simple';
     
-    // Only toggle if in Simple mode
     if (searchMode === 'simple') {
+      // Toggle Simple search type
       const currentType = data.simpleSearchType || 'exact';
       const newType = currentType === 'exact' ? 'fuzzy' : 'exact';
       
@@ -439,6 +468,9 @@ document.getElementById('searchModeIndicator').addEventListener('click', () => {
         // Update indicator
         updateSearchModeIndicator();
       });
+    } else {
+      // Show model dropdown for AI mode
+      showModelDropdown();
     }
   });
 });
@@ -1461,4 +1493,344 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Ensure clean button is enabled
   updateCleanButtonState(false);
+});
+
+
+// ============================================
+// Model Selector Dropdown Functionality
+// ============================================
+
+// Show model dropdown
+async function showModelDropdown() {
+  const dropdown = document.getElementById('modelDropdown');
+  const dropdownList = document.getElementById('modelDropdownList');
+  const dropdownArrow = document.getElementById('dropdownArrow');
+  
+  // Get current settings
+  const data = await chrome.storage.local.get(['searchMode', 'ollamaUrl', 'ollamaModel', 'apiProvider', 'apiModel', 'apiKeys']);
+  
+  const searchMode = data.searchMode || 'simple';
+  
+  // Only show dropdown for AI mode
+  if (searchMode !== 'ai') {
+    return;
+  }
+  
+  // Clear previous content
+  dropdownList.innerHTML = '<div class="dropdown-loading">⏳ Loading models...</div>';
+  
+  // Show dropdown
+  dropdown.style.display = 'block';
+  dropdownArrow.classList.add('open');
+  
+  // Load models based on provider
+  if (data.apiProvider) {
+    // API Provider
+    await loadAPIModels(data.apiProvider, data.apiModel);
+  } else if (data.ollamaModel) {
+    // Ollama
+    await loadOllamaModels(data.ollamaUrl || 'http://localhost:11434', data.ollamaModel);
+  } else {
+    dropdownList.innerHTML = '<div class="dropdown-error">❌ No AI provider configured</div>';
+  }
+}
+
+// Load Ollama models
+async function loadOllamaModels(ollamaUrl, currentModel) {
+  const dropdownList = document.getElementById('modelDropdownList');
+  
+  try {
+    const response = await fetch(`${ollamaUrl}/api/tags`, {
+      method: 'GET',
+      signal: AbortSignal.timeout(5000)
+    });
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch models');
+    }
+    
+    const data = await response.json();
+    
+    if (!data.models || data.models.length === 0) {
+      dropdownList.innerHTML = '<div class="dropdown-empty">No models installed</div>';
+      return;
+    }
+    
+    // Render models
+    dropdownList.innerHTML = '';
+    data.models.forEach(model => {
+      const modelItem = document.createElement('div');
+      modelItem.className = 'model-item';
+      if (model.name === currentModel) {
+        modelItem.classList.add('active');
+      }
+      modelItem.dataset.model = model.name;
+      modelItem.dataset.provider = 'ollama';
+      
+      modelItem.innerHTML = `
+        <span class="model-name">${model.name}</span>
+        <span class="model-status">${model.name === currentModel ? '✓' : ''}</span>
+      `;
+      
+      modelItem.addEventListener('click', () => selectModel(model.name, 'ollama'));
+      
+      dropdownList.appendChild(modelItem);
+    });
+    
+  } catch (error) {
+    console.error('Error loading Ollama models:', error);
+    dropdownList.innerHTML = '<div class="dropdown-error">❌ Ollama not running or unreachable</div>';
+  }
+}
+
+// Load API models
+async function loadAPIModels(provider, currentModel) {
+  const dropdownList = document.getElementById('modelDropdownList');
+  
+  const models = providerModels[provider];
+  
+  if (!models || models.length === 0) {
+    dropdownList.innerHTML = '<div class="dropdown-empty">No models available</div>';
+    return;
+  }
+  
+  // Render models
+  dropdownList.innerHTML = '';
+  models.forEach(modelName => {
+    const modelItem = document.createElement('div');
+    modelItem.className = 'model-item';
+    if (modelName === currentModel) {
+      modelItem.classList.add('active');
+    }
+    modelItem.dataset.model = modelName;
+    modelItem.dataset.provider = provider;
+    
+    modelItem.innerHTML = `
+      <span class="model-name">${modelName}</span>
+      <span class="model-status">${modelName === currentModel ? '✓' : ''}</span>
+    `;
+    
+    modelItem.addEventListener('click', () => selectModel(modelName, provider));
+    
+    dropdownList.appendChild(modelItem);
+  });
+}
+
+// Select and verify model
+async function selectModel(modelName, provider) {
+  const modelItems = document.querySelectorAll('.model-item');
+  const clickedItem = Array.from(modelItems).find(item => item.dataset.model === modelName);
+  
+  if (!clickedItem || clickedItem.classList.contains('verifying')) {
+    return;
+  }
+  
+  // Disable all items
+  modelItems.forEach(item => item.classList.add('disabled'));
+  
+  // Show verifying state
+  clickedItem.classList.add('verifying');
+  const statusSpan = clickedItem.querySelector('.model-status');
+  statusSpan.innerHTML = '<span class="loading">⏳</span>';
+  
+  try {
+    let success = false;
+    
+    if (provider === 'ollama') {
+      success = await verifyOllamaModel(modelName);
+    } else {
+      success = await verifyAPIModel(provider, modelName);
+    }
+    
+    if (success) {
+      // Save model
+      if (provider === 'ollama') {
+        await chrome.storage.local.set({ ollamaModel: modelName });
+      } else {
+        await chrome.storage.local.set({ apiModel: modelName });
+      }
+      
+      // Show success
+      statusSpan.innerHTML = '<span class="success">✓</span>';
+      showToast('✓ Model switched successfully', 'success');
+      
+      // Update indicator
+      updateSearchModeIndicator();
+      
+      // Close dropdown after short delay
+      setTimeout(() => {
+        closeDropdown();
+      }, 1000);
+      
+    } else {
+      // Show error
+      statusSpan.innerHTML = '<span class="error">✗</span>';
+      showToast('❌ Model verification failed', 'error');
+      
+      // Re-enable items after delay
+      setTimeout(() => {
+        clickedItem.classList.remove('verifying');
+        modelItems.forEach(item => item.classList.remove('disabled'));
+        statusSpan.innerHTML = '';
+      }, 2000);
+    }
+    
+  } catch (error) {
+    console.error('Error verifying model:', error);
+    statusSpan.innerHTML = '<span class="error">✗</span>';
+    showToast('❌ Error: ' + error.message, 'error');
+    
+    // Re-enable items
+    setTimeout(() => {
+      clickedItem.classList.remove('verifying');
+      modelItems.forEach(item => item.classList.remove('disabled'));
+      statusSpan.innerHTML = '';
+    }, 2000);
+  }
+}
+
+// Verify Ollama model
+async function verifyOllamaModel(modelName) {
+  const data = await chrome.storage.local.get(['ollamaUrl']);
+  const ollamaUrl = data.ollamaUrl || 'http://localhost:11434';
+  
+  try {
+    const response = await fetch(`${ollamaUrl}/api/generate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: modelName,
+        prompt: 'test',
+        stream: false
+      }),
+      signal: AbortSignal.timeout(10000)
+    });
+    
+    return response.ok;
+  } catch (error) {
+    console.error('Ollama verification error:', error);
+    return false;
+  }
+}
+
+// Verify API model
+async function verifyAPIModel(provider, modelName) {
+  const data = await chrome.storage.local.get(['apiKeys']);
+  const apiKeys = data.apiKeys || {};
+  const apiKey = apiKeys[provider];
+  
+  if (!apiKey) {
+    throw new Error('API key not found');
+  }
+  
+  try {
+    const response = await chrome.runtime.sendMessage({
+      action: 'verifyAPI',
+      provider: provider,
+      apiKey: apiKey,
+      model: modelName
+    });
+    
+    return response && response.success;
+  } catch (error) {
+    console.error('API verification error:', error);
+    return false;
+  }
+}
+
+// Close dropdown
+function closeDropdown() {
+  const dropdown = document.getElementById('modelDropdown');
+  const dropdownArrow = document.getElementById('dropdownArrow');
+  
+  dropdown.style.display = 'none';
+  dropdownArrow.classList.remove('open');
+}
+
+// Show toast notification
+function showToast(message, type = 'info') {
+  // Remove existing toast
+  const existingToast = document.querySelector('.toast-notification');
+  if (existingToast) {
+    existingToast.remove();
+  }
+  
+  // Create toast
+  const toast = document.createElement('div');
+  toast.className = `toast-notification toast-${type}`;
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 10px 20px;
+    background: ${type === 'success' ? '#48bb78' : type === 'error' ? '#e53e3e' : '#667eea'};
+    color: white;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    z-index: 10000;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    animation: toastSlideIn 0.3s ease;
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Auto remove after 3 seconds
+  setTimeout(() => {
+    toast.style.animation = 'toastSlideOut 0.3s ease';
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
+}
+
+// Add toast animations to document
+if (!document.querySelector('#toast-animations')) {
+  const style = document.createElement('style');
+  style.id = 'toast-animations';
+  style.textContent = `
+    @keyframes toastSlideIn {
+      from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+    }
+    @keyframes toastSlideOut {
+      from {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+      }
+      to {
+        opacity: 0;
+        transform: translateX(-50%) translateY(20px);
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const dropdown = document.getElementById('modelDropdown');
+  const indicator = document.getElementById('searchModeIndicator');
+  
+  if (dropdown.style.display === 'block' && 
+      !dropdown.contains(e.target) && 
+      !indicator.contains(e.target)) {
+    closeDropdown();
+  }
+});
+
+// Close dropdown on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    const dropdown = document.getElementById('modelDropdown');
+    if (dropdown.style.display === 'block') {
+      closeDropdown();
+    }
+  }
 });

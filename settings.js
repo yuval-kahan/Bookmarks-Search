@@ -263,7 +263,18 @@ document.getElementById("saveBtn").addEventListener("click", () => {
       const modelCustom = document
         .getElementById("apiModelCustom")
         .value.trim();
-      settings.apiModel = modelSelect === "custom" ? modelCustom : modelSelect;
+      const selectedModel = modelSelect === "custom" ? modelCustom : modelSelect;
+      
+      // Check if model is selected
+      if (!selectedModel || selectedModel === "") {
+        showErrorModal(
+          "Missing Model",
+          "Cannot save settings. Please select a model for the API provider."
+        );
+        return; // Do not save
+      }
+      
+      settings.apiModel = selectedModel;
 
       settings.ollamaUrl = "";
       settings.ollamaModel = "";
