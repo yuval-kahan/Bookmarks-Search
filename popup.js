@@ -455,10 +455,8 @@ updateAIFeaturesState();
 
 // Handle mode indicator click
 document.getElementById('searchModeIndicator').addEventListener('click', () => {
-  console.log('Mode indicator clicked');
   chrome.storage.local.get(['searchMode', 'simpleSearchType'], (data) => {
     const searchMode = data.searchMode || 'simple';
-    console.log('Current search mode:', searchMode);
     
     if (searchMode === 'simple') {
       // Toggle Simple search type
@@ -472,7 +470,6 @@ document.getElementById('searchModeIndicator').addEventListener('click', () => {
       });
     } else {
       // Show model dropdown for AI mode
-      console.log('Calling showModelDropdown');
       showModelDropdown();
     }
   });
@@ -1505,23 +1502,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Show model dropdown
 async function showModelDropdown() {
-  console.log('showModelDropdown called');
   const dropdown = document.getElementById('modelDropdown');
   const dropdownList = document.getElementById('modelDropdownList');
   const dropdownArrow = document.getElementById('dropdownArrow');
   
-  console.log('Dropdown elements:', { dropdown, dropdownList, dropdownArrow });
-  
   // Get current settings
   const data = await chrome.storage.local.get(['searchMode', 'ollamaUrl', 'ollamaModel', 'apiProvider', 'apiModel', 'apiKeys']);
-  
-  console.log('Storage data:', data);
   
   const searchMode = data.searchMode || 'simple';
   
   // Only show dropdown for AI mode
   if (searchMode !== 'ai') {
-    console.log('Not in AI mode, returning');
     return;
   }
   
@@ -1532,19 +1523,14 @@ async function showModelDropdown() {
   dropdown.style.display = 'block';
   dropdownArrow.classList.add('open');
   
-  console.log('Dropdown shown, loading models...');
-  
   // Load models based on provider
   if (data.apiProvider) {
     // API Provider
-    console.log('Loading API models for provider:', data.apiProvider);
     await loadAPIModels(data.apiProvider, data.apiModel);
   } else if (data.ollamaModel) {
     // Ollama
-    console.log('Loading Ollama models');
     await loadOllamaModels(data.ollamaUrl || 'http://localhost:11434', data.ollamaModel);
   } else {
-    console.log('No provider configured');
     dropdownList.innerHTML = '<div class="dropdown-error">❌ No AI provider configured</div>';
   }
 }
@@ -1650,6 +1636,10 @@ async function selectModel(modelName, provider) {
   try {
     let success = false;
     
+    // Show verifying toast
+    const providerName = provider === 'ollama' ? 'Ollama' : getProviderName(provider);
+    showToast(`🔍 Testing ${modelName} with ${providerName}...`, 'info');
+    
     if (provider === 'ollama') {
       success = await verifyOllamaModel(modelName);
     } else {
@@ -1666,7 +1656,7 @@ async function selectModel(modelName, provider) {
       
       // Show success
       statusSpan.innerHTML = '<span class="success">✓</span>';
-      showToast('✓ Model switched successfully', 'success');
+      showToast(`✓ ${modelName} verified and activated!`, 'success');
       
       // Update indicator
       updateSearchModeIndicator();
@@ -1679,7 +1669,7 @@ async function selectModel(modelName, provider) {
     } else {
       // Show error
       statusSpan.innerHTML = '<span class="error">✗</span>';
-      showToast('❌ Model verification failed', 'error');
+      showToast(`❌ ${modelName} verification failed - check connection`, 'error');
       
       // Re-enable items after delay
       setTimeout(() => {
@@ -1692,7 +1682,7 @@ async function selectModel(modelName, provider) {
   } catch (error) {
     console.error('Error verifying model:', error);
     statusSpan.innerHTML = '<span class="error">✗</span>';
-    showToast('❌ Error: ' + error.message, 'error');
+    showToast(`❌ Connection error: ${error.message}`, 'error');
     
     // Re-enable items
     setTimeout(() => {
