@@ -626,6 +626,12 @@
       color: #333;
     }
     
+    .delete-all-container {
+      padding: 15px;
+      background: white;
+      border-bottom: 1px solid #e0e0e0;
+    }
+    
     .delete-all-btn {
       padding: 8px 16px;
       background: #f0f0f0;
@@ -636,7 +642,6 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
-      margin-top: 10px;
       display: block;
       width: 100%;
     }
@@ -876,8 +881,12 @@
         </div>
         <button id="applyCustomFilter">Apply Filter</button>
         <button id="clearCustomFilter">Clear</button>
-        <button id="deleteAllHistory" class="delete-all-btn">🗑️ Delete All</button>
       </div>
+    </div>
+    
+    <!-- Delete All Button (in white history area) -->
+    <div class="delete-all-container">
+      <button id="deleteAllHistory" class="delete-all-btn">🗑️ Delete All</button>
     </div>
     
     <div class="history-list" id="historyList">
