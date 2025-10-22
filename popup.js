@@ -666,38 +666,117 @@ document.getElementById('historyBtn').addEventListener('click', openHistoryScree
 document.getElementById('historyBackBtn').addEventListener('click', closeHistoryScreen);
 document.getElementById('historyDetailBackBtn').addEventListener('click', closeHistoryDetail);
 
-// RAW Data Modal functions
-function openRawModal() {
-  const modal = document.getElementById('rawModal');
-  const sentContent = document.getElementById('rawSentContent');
-  const receivedContent = document.getElementById('rawReceivedContent');
-  
-  if (lastRawData.sent) {
-    sentContent.textContent = lastRawData.sent;
-  } else {
-    sentContent.textContent = 'No data sent yet. Perform a search to see the data.';
+// RAW Data Modal functions - inject into active tab
+async function openRawModal() {
+  try {
+    // Get active tab
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    
+    if (!tab || !tab.id) {
+      openRawModalInNewTab();
+      return;
+    }
+    
+    // Try to send message to content script
+    try {
+      await chrome.tabs.sendMessage(tab.id, {
+        action: 'showRawModal',
+        rawData: {
+          sent: lastRawData.sent || 'No data sent yet. Perform a search to see the data.',
+          received: lastRawData.received || 'No data received yet. Perform a search to see the data.'
+        }
+      });
+    } catch (err) {
+      // Content script not loaded, open in new tab instead
+      console.log('Content script not available, opening in new tab');
+      openRawModalInNewTab();
+    }
+  } catch (error) {
+    console.error('Error opening RAW modal:', error);
+    openRawModalInNewTab();
   }
-  
-  if (lastRawData.received) {
-    receivedContent.textContent = lastRawData.received;
-  } else {
-    receivedContent.textContent = 'No data received yet. Perform a search to see the data.';
-  }
-  
-  modal.classList.add('active');
 }
 
-function closeRawModal() {
-  document.getElementById('rawModal').classList.remove('active');
+// Fallback: Open RAW data in a new tab
+function openRawModalInNewTab() {
+  const rawData = {
+    sent: lastRawData.sent || 'No data sent yet. Perform a search to see the data.',
+    received: lastRawData.received || 'No data received yet. Perform a search to see the data.'
+  };
+  
+  // Create HTML for new tab
+  const html = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>RAW Data View</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #f5f5f5;
+      padding: 40px 20px;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+      padding: 30px;
+    }
+    h1 {
+      color: #667eea;
+      margin-bottom: 30px;
+      font-size: 24px;
+    }
+    .section {
+      margin-bottom: 30px;
+    }
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    .section-content {
+      background: #f8f9fa;
+      padding: 20px;
+      border-radius: 8px;
+      border-left: 4px solid #667eea;
+      font-family: 'Courier New', monospace;
+      font-size: 13px;
+      line-height: 1.8;
+      white-space: pre-wrap;
+      word-break: break-word;
+      color: #333;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+    .received { border-left-color: #48bb78; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📤 RAW Data View</h1>
+    <div class="section">
+      <div class="section-title">📨 Sent to AI:</div>
+      <div class="section-content">${rawData.sent.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+    </div>
+    <div class="section">
+      <div class="section-title">📥 Received from AI:</div>
+      <div class="section-content received">${rawData.received.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+  
+  // Open in new tab
+  const blob = new Blob([html], { type: 'text/html' });
+  const url = URL.createObjectURL(blob);
+  chrome.tabs.create({ url: url });
 }
 
-// Event listeners for RAW modal
+// Event listener for RAW button
 document.getElementById('rawBtn').addEventListener('click', openRawModal);
-document.getElementById('rawModalClose').addEventListener('click', closeRawModal);
-
-// Close modal on overlay click
-document.getElementById('rawModal').addEventListener('click', (e) => {
-  if (e.target.id === 'rawModal') {
-    closeRawModal();
-  }
-});

@@ -182,10 +182,10 @@
       position: fixed;
       top: 0;
       left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 2000;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 999999;
       align-items: center;
       justify-content: center;
     }
@@ -197,12 +197,14 @@
     .raw-modal-content {
       background: white;
       border-radius: 12px;
-      width: 90%;
-      max-width: 600px;
-      max-height: 80vh;
+      width: 800px;
+      max-width: 90vw;
+      height: 600px;
+      max-height: 90vh;
       display: flex;
       flex-direction: column;
-      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+      position: relative;
     }
     
     .raw-modal-header {
