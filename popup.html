@@ -262,6 +262,17 @@
       color: #333;
     }
     
+    #deepSearchWarningOk:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    #deepSearchWarningCancel:hover {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
     .raw-modal-body {
       padding: 20px;
       overflow-y: auto;
@@ -872,6 +883,40 @@
         <div class="raw-section">
           <div class="raw-section-title">📥 Received from AI:</div>
           <div class="raw-section-content" id="rawReceivedContent">No data received yet</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Deep Search Warning Modal -->
+  <div class="raw-modal" id="deepSearchWarningModal" style="display: none;">
+    <div class="raw-modal-content" style="max-width: 400px; height: auto;">
+      <div class="raw-modal-header">
+        <div class="raw-modal-title">⚠️ Deep Search Notice</div>
+        <div class="raw-modal-close" id="deepSearchWarningClose">×</div>
+      </div>
+      <div class="raw-modal-body" style="padding: 20px;">
+        <div style="font-size: 14px; color: #555; line-height: 1.6; margin-bottom: 15px;">
+          <strong style="color: #ed8936;">⏱️ Deep search will take longer than usual</strong><br>
+          <span style="font-size: 13px;">The system needs to fetch and convert webpage content to Markdown.</span>
+        </div>
+        
+        <div id="preMarkdownSuggestion" style="background: #f0f4ff; padding: 12px; border-radius: 6px; margin-bottom: 15px; border-left: 3px solid #667eea; font-size: 13px; color: #555;">
+          💡 <strong>Tip:</strong> Enable "Pre Markdown" for faster searches in the future.
+        </div>
+        
+        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px; background: #f8f9fa; border-radius: 6px; margin-bottom: 15px;">
+          <input type="checkbox" id="dontShowDeepSearchWarning" style="width: 16px; height: 16px; cursor: pointer; accent-color: #667eea;">
+          <span style="font-size: 13px; color: #555;">Don't show this message again</span>
+        </label>
+        
+        <div style="display: flex; gap: 10px;">
+          <button id="deepSearchWarningCancel" style="flex: 1; padding: 10px; background: #f0f0f0; color: #666; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+            Cancel
+          </button>
+          <button id="deepSearchWarningOk" style="flex: 1; padding: 10px; background: #667eea; color: white; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s ease;">
+            OK, Continue
+          </button>
         </div>
       </div>
     </div>

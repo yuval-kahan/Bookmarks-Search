@@ -415,8 +415,84 @@ autoResizeTextarea();
 let searchInProgress = false;
 let abortSearch = false;
 
+// Check if Deep Search warning should be shown
+async function shouldShowDeepSearchWarning() {
+  const deepSearchEnabled = document.getElementById('deepSearchCheckbox').checked;
+  const preMarkdownEnabled = document.getElementById('preMarkdownCheckbox').checked;
+  
+  if (!deepSearchEnabled) {
+    return false; // Deep Search not enabled
+  }
+  
+  // Check if user disabled the warning
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['dontShowDeepSearchWarning'], (data) => {
+      resolve(!data.dontShowDeepSearchWarning);
+    });
+  });
+}
+
+// Show Deep Search warning modal
+function showDeepSearchWarning() {
+  return new Promise((resolve) => {
+    const modal = document.getElementById('deepSearchWarningModal');
+    const preMarkdownSuggestion = document.getElementById('preMarkdownSuggestion');
+    const preMarkdownEnabled = document.getElementById('preMarkdownCheckbox').checked;
+    
+    // Show/hide Pre Markdown suggestion based on current state
+    if (preMarkdownEnabled) {
+      preMarkdownSuggestion.style.display = 'none';
+    } else {
+      preMarkdownSuggestion.style.display = 'block';
+    }
+    
+    modal.style.display = 'flex';
+    
+    // OK button
+    const okBtn = document.getElementById('deepSearchWarningOk');
+    const cancelBtn = document.getElementById('deepSearchWarningCancel');
+    const closeBtn = document.getElementById('deepSearchWarningClose');
+    const dontShowCheckbox = document.getElementById('dontShowDeepSearchWarning');
+    
+    const handleOk = () => {
+      // Save preference if checkbox is checked
+      if (dontShowCheckbox.checked) {
+        chrome.storage.local.set({ dontShowDeepSearchWarning: true });
+      }
+      modal.style.display = 'none';
+      cleanup();
+      resolve(true); // Continue with search
+    };
+    
+    const handleCancel = () => {
+      modal.style.display = 'none';
+      cleanup();
+      resolve(false); // Cancel search
+    };
+    
+    const cleanup = () => {
+      okBtn.removeEventListener('click', handleOk);
+      cancelBtn.removeEventListener('click', handleCancel);
+      closeBtn.removeEventListener('click', handleCancel);
+      dontShowCheckbox.checked = false;
+    };
+    
+    okBtn.addEventListener('click', handleOk);
+    cancelBtn.addEventListener('click', handleCancel);
+    closeBtn.addEventListener('click', handleCancel);
+  });
+}
+
 // Search functionality
 document.getElementById("searchBtn").addEventListener("click", async () => {
+  // Check if Deep Search warning should be shown
+  if (await shouldShowDeepSearchWarning()) {
+    const shouldContinue = await showDeepSearchWarning();
+    if (!shouldContinue) {
+      return; // User cancelled
+    }
+  }
+  
   const query = document.getElementById("query").value.trim();
   const errorDiv = document.getElementById("error");
   const statusDiv = document.getElementById("status");
