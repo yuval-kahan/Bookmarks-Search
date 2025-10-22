@@ -1470,6 +1470,9 @@ document.getElementById('cleanBtn').addEventListener('click', () => {
   const textarea = document.getElementById('query');
   textarea.style.height = 'auto';
   
+  // Clear saved popup state
+  chrome.storage.local.remove('popupState');
+  
   // Focus back on search input
   textarea.focus();
 });
