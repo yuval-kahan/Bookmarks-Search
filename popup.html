@@ -472,23 +472,206 @@
       color: #667eea;
     }
     
+    .history-controls {
+      padding: 15px;
+      border-bottom: 1px solid #e0e0e0;
+      background: #f8f9fa;
+    }
+    
+    .search-section {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    #historySearch {
+      flex: 1;
+      padding: 8px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 13px;
+      transition: all 0.3s ease;
+    }
+    
+    #historySearch:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    #searchMode {
+      padding: 8px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    #searchMode:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .filter-section {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+    
+    .filter-section label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+    }
+    
+    #quickFilter {
+      flex: 1;
+      padding: 8px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 13px;
+      background: white;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    #quickFilter:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+    
+    .custom-range-section {
+      border: 1px solid #e0e0e0;
+      padding: 15px;
+      border-radius: 8px;
+      background: white;
+      margin-bottom: 15px;
+    }
+    
+    .custom-range-section > label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #555;
+      display: block;
+      margin-bottom: 10px;
+    }
+    
+    .date-inputs {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 10px;
+    }
+    
+    .date-group {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+    
+    .date-group label {
+      font-size: 12px;
+      font-weight: 500;
+      color: #666;
+    }
+    
+    .date-group input[type="date"],
+    .date-group input[type="time"] {
+      padding: 6px 8px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 12px;
+      transition: all 0.3s ease;
+    }
+    
+    .date-group input:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    #applyCustomFilter,
+    #clearCustomFilter {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      margin-right: 8px;
+    }
+    
+    #applyCustomFilter {
+      background: #667eea;
+      color: white;
+    }
+    
+    #applyCustomFilter:hover {
+      background: #5568d3;
+      transform: translateY(-1px);
+    }
+    
+    #clearCustomFilter {
+      background: #f0f0f0;
+      color: #666;
+    }
+    
+    #clearCustomFilter:hover {
+      background: #e0e0e0;
+      color: #333;
+    }
+    
+    .actions-section {
+      display: flex;
+      justify-content: flex-end;
+    }
+    
+    .delete-all-btn {
+      padding: 8px 16px;
+      background: #fee;
+      color: #e53e3e;
+      border: 2px solid #fc8181;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .delete-all-btn:hover {
+      background: #fdd;
+      border-color: #e53e3e;
+      transform: translateY(-1px);
+    }
+    
     .history-list {
       padding: 15px;
     }
     
     .history-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       padding: 12px;
       margin-bottom: 10px;
       background: #f8f9fa;
       border-radius: 8px;
       border-left: 3px solid #667eea;
-      cursor: pointer;
       transition: all 0.2s ease;
     }
     
     .history-item:hover {
       background: #f0f4ff;
       transform: translateX(3px);
+    }
+    
+    .history-content {
+      flex: 1;
+      cursor: pointer;
     }
     
     .history-time {
@@ -507,6 +690,38 @@
     .history-count {
       font-size: 11px;
       color: #667eea;
+    }
+    
+    .delete-item-btn {
+      background: none;
+      border: none;
+      font-size: 16px;
+      cursor: pointer;
+      padding: 8px;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+    
+    .delete-item-btn:hover {
+      background: #fee;
+      color: #e53e3e;
+    }
+    
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+    }
+    
+    .empty-icon {
+      font-size: 48px;
+      margin-bottom: 15px;
+      opacity: 0.5;
+    }
+    
+    .empty-message {
+      font-size: 14px;
+      color: #999;
+      font-weight: 500;
     }
     
     .history-detail {
@@ -620,8 +835,63 @@
       <div class="history-back-btn" id="historyBackBtn">←</div>
       <div class="history-title">📜 Search History</div>
     </div>
+    
+    <!-- Search and Filter Controls -->
+    <div class="history-controls">
+      <!-- Search Bar -->
+      <div class="search-section">
+        <input type="text" id="historySearch" placeholder="Search history...">
+        <select id="searchMode">
+          <option value="fuzzy">Fuzzy</option>
+          <option value="exact">Exact Match</option>
+        </select>
+      </div>
+      
+      <!-- Quick Filters -->
+      <div class="filter-section">
+        <label>Quick Filter:</label>
+        <select id="quickFilter">
+          <option value="all">All Time</option>
+          <option value="today">Today</option>
+          <option value="yesterday">Yesterday</option>
+          <option value="week">Last Week</option>
+          <option value="month">Last Month</option>
+        </select>
+      </div>
+      
+      <!-- Custom Date Range -->
+      <div class="custom-range-section">
+        <label>Custom Range:</label>
+        <div class="date-inputs">
+          <div class="date-group">
+            <label>From:</label>
+            <input type="date" id="fromDate">
+            <input type="time" id="fromTime">
+          </div>
+          <div class="date-group">
+            <label>To:</label>
+            <input type="date" id="toDate">
+            <input type="time" id="toTime">
+          </div>
+        </div>
+        <button id="applyCustomFilter">Apply Filter</button>
+        <button id="clearCustomFilter">Clear</button>
+      </div>
+      
+      <!-- Actions -->
+      <div class="actions-section">
+        <button id="deleteAllHistory" class="delete-all-btn">🗑️ Delete All</button>
+      </div>
+    </div>
+    
     <div class="history-list" id="historyList">
       <!-- History items will be inserted here -->
+    </div>
+    
+    <!-- Empty State -->
+    <div class="empty-state" id="emptyState" style="display: none;">
+      <div class="empty-icon">📜</div>
+      <div class="empty-message">No search history yet</div>
     </div>
   </div>
   
