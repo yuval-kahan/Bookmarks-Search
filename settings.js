@@ -162,7 +162,7 @@ document.querySelectorAll(".collapsible-header").forEach((header) => {
 });
 
 // Save settings
-document.getElementById("saveBtn").addEventListener("click", () => {
+document.getElementById("saveBtn").addEventListener("click", async () => {
   let searchMode = document.querySelector(
     'input[name="searchMode"]:checked'
   ).value;
@@ -175,7 +175,6 @@ document.getElementById("saveBtn").addEventListener("click", () => {
   if (searchMode === "ai" && selectedAIProvider === "api") {
     const apiKey = document.getElementById("apiKey").value.trim();
     const apiProvider = document.getElementById("apiProvider").value;
-    const verificationStatus = getAPIVerificationStatus();
 
     // Block if no API key provided
     if (!apiKey || !apiProvider) {
@@ -186,14 +185,31 @@ document.getElementById("saveBtn").addEventListener("click", () => {
       return; // Do not save, do not navigate
     }
 
+    // Run verification before saving
+    saveStatus.textContent = "🔄 Verifying API connection...";
+    saveStatus.className = "info";
+    saveStatus.style.display = "block";
+    
+    await checkAPIVerification();
+    
+    // Wait a moment for verification to complete
+    await new Promise(resolve => setTimeout(resolve, 500));
+    
+    const verificationStatus = getAPIVerificationStatus();
+
     // Block if verification explicitly failed
     if (verificationStatus === "failed") {
+      saveStatus.style.display = "none";
       showErrorModal(
         "API Configuration Failed",
-        "Cannot save settings because the API configuration failed. Please check your API key and try again."
+        "Cannot save settings because the API configuration failed. Please check your API key, CORS settings, and try again."
       );
       return; // Do not save, do not navigate
     }
+    
+    // Clear status message
+    saveStatus.textContent = "";
+    saveStatus.style.display = "none";
   }
 
   // Check if AI mode has errors (no provider selected)
