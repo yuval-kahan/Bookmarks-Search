@@ -1637,19 +1637,24 @@ async function selectModel(modelName, provider) {
   statusSpan.innerHTML = '<span class="loading">⏳</span>';
   
   try {
-    let success = false;
+    let result = null;
     
-    // Show verifying toast
+    // Show verifying toast with timeout info for Ollama
     const providerName = provider === 'ollama' ? 'Ollama' : getProviderName(provider);
-    showToast(`🔍 Testing ${modelName} with ${providerName}...`, 'info');
-    
     if (provider === 'ollama') {
-      success = await verifyOllamaModel(modelName);
+      const timeout = getModelTimeout(modelName);
+      showToast(`🔍 Testing ${modelName}... (may take up to ${timeout/1000}s)`, 'info');
     } else {
-      success = await verifyAPIModel(provider, modelName);
+      showToast(`🔍 Testing ${modelName} with ${providerName}...`, 'info');
     }
     
-    if (success) {
+    if (provider === 'ollama') {
+      result = await verifyOllamaModel(modelName);
+    } else {
+      result = await verifyAPIModel(provider, modelName);
+    }
+    
+    if (result.success || result === true) {
       // Save model
       if (provider === 'ollama') {
         await chrome.storage.local.set({ ollamaModel: modelName });
@@ -1670,36 +1675,112 @@ async function selectModel(modelName, provider) {
       }, 1000);
       
     } else {
-      // Show error
+      // Show error with specific message
       statusSpan.innerHTML = '<span class="error">✗</span>';
-      showToast(`❌ ${modelName} verification failed - check connection`, 'error');
+      const errorMsg = result.error || `${modelName} verification failed`;
+      showToast(errorMsg, 'error');
+      
+      // Suggest lighter model if Ollama and model is large
+      if (provider === 'ollama' && getModelSize(modelName) > 7) {
+        const allModels = Array.from(modelItems).map(item => item.dataset.model);
+        const suggestion = suggestLighterModel(modelName, allModels);
+        
+        if (suggestion) {
+          setTimeout(() => {
+            showToast(`💡 Try ${suggestion} instead? (lighter & faster)`, 'info');
+          }, 3500);
+        }
+      }
       
       // Re-enable items after delay
       setTimeout(() => {
         clickedItem.classList.remove('verifying');
         modelItems.forEach(item => item.classList.remove('disabled'));
         statusSpan.innerHTML = '';
-      }, 2000);
+      }, 3000);
     }
     
   } catch (error) {
     console.error('Error verifying model:', error);
     statusSpan.innerHTML = '<span class="error">✗</span>';
-    showToast(`❌ Connection error: ${error.message}`, 'error');
+    showToast(`❌ Unexpected error: ${error.message}`, 'error');
     
     // Re-enable items
     setTimeout(() => {
       clickedItem.classList.remove('verifying');
       modelItems.forEach(item => item.classList.remove('disabled'));
       statusSpan.innerHTML = '';
-    }, 2000);
+    }, 3000);
   }
+}
+
+// Get timeout based on model size
+function getModelTimeout(modelName) {
+  // Extract model size from name (e.g., "llama3.1:8b" -> 8)
+  const sizeMatch = modelName.match(/(\d+)b/i);
+  const size = sizeMatch ? parseInt(sizeMatch[1]) : 7;
+  
+  if (size <= 7) return 15000;      // 15 seconds for small models
+  if (size <= 13) return 25000;     // 25 seconds for medium models
+  return 35000;                     // 35 seconds for large models
+}
+
+// Get model size from name
+function getModelSize(modelName) {
+  const sizeMatch = modelName.match(/(\d+)b/i);
+  return sizeMatch ? parseInt(sizeMatch[1]) : 7;
+}
+
+// Suggest lighter alternative model
+function suggestLighterModel(failedModel, availableModels) {
+  const failedSize = getModelSize(failedModel);
+  
+  // If failed model is already small, no suggestion
+  if (failedSize <= 7) return null;
+  
+  // Find smaller models
+  const smallerModels = availableModels.filter(model => {
+    const size = getModelSize(model);
+    return size < failedSize && size <= 8;
+  });
+  
+  // Prefer llama3.1:8b if available
+  const preferred = smallerModels.find(m => m.includes('llama3.1') && m.includes('8b'));
+  if (preferred) return preferred;
+  
+  // Otherwise return the first smaller model
+  return smallerModels[0] || null;
+}
+
+// Parse Ollama error for user-friendly message
+function parseOllamaError(error, modelName) {
+  const errorMsg = error.message.toLowerCase();
+  
+  if (errorMsg.includes('timeout') || error.name === 'TimeoutError') {
+    return `⏱️ ${modelName} is taking too long to load. Try a smaller model or wait a moment.`;
+  }
+  
+  if (errorMsg.includes('fetch') || errorMsg.includes('network')) {
+    return `🔌 Can't reach Ollama. Make sure it's running.`;
+  }
+  
+  if (errorMsg.includes('memory') || errorMsg.includes('oom')) {
+    return `💾 Not enough memory. Close other apps or try a smaller model.`;
+  }
+  
+  if (errorMsg.includes('gpu') || errorMsg.includes('cuda')) {
+    return `🔥 GPU issue detected. Try again or use a smaller model.`;
+  }
+  
+  return `❌ ${modelName} verification failed - ${error.message}`;
 }
 
 // Verify Ollama model
 async function verifyOllamaModel(modelName) {
   const data = await chrome.storage.local.get(['ollamaUrl']);
   const ollamaUrl = data.ollamaUrl || 'http://localhost:11434';
+  
+  const timeout = getModelTimeout(modelName);
   
   try {
     const response = await fetch(`${ollamaUrl}/api/generate`, {
@@ -1710,13 +1791,21 @@ async function verifyOllamaModel(modelName) {
         prompt: 'test',
         stream: false
       }),
-      signal: AbortSignal.timeout(10000)
+      signal: AbortSignal.timeout(timeout)
     });
     
-    return response.ok;
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.error || `HTTP ${response.status}`);
+    }
+    
+    return { success: true };
   } catch (error) {
     console.error('Ollama verification error:', error);
-    return false;
+    return { 
+      success: false, 
+      error: parseOllamaError(error, modelName)
+    };
   }
 }
 
@@ -1727,7 +1816,10 @@ async function verifyAPIModel(provider, modelName) {
   const apiKey = apiKeys[provider];
   
   if (!apiKey) {
-    throw new Error('API key not found');
+    return { 
+      success: false, 
+      error: `❌ No API key found for ${getProviderName(provider)}`
+    };
   }
   
   try {
@@ -1738,10 +1830,21 @@ async function verifyAPIModel(provider, modelName) {
       model: modelName
     });
     
-    return response && response.success;
+    if (response && response.success) {
+      return { success: true };
+    } else {
+      const errorMsg = response?.error || 'Verification failed';
+      return { 
+        success: false, 
+        error: `❌ ${modelName}: ${errorMsg}`
+      };
+    }
   } catch (error) {
     console.error('API verification error:', error);
-    return false;
+    return { 
+      success: false, 
+      error: `❌ Connection error: ${error.message}`
+    };
   }
 }
 
