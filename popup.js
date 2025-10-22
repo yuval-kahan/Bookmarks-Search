@@ -469,8 +469,13 @@ document.getElementById('searchModeIndicator').addEventListener('click', () => {
         updateSearchModeIndicator();
       });
     } else {
-      // Show model dropdown for AI mode
-      showModelDropdown();
+      // Toggle model dropdown for AI mode
+      const dropdown = document.getElementById('modelDropdown');
+      if (dropdown.style.display === 'block') {
+        closeDropdown();
+      } else {
+        showModelDropdown();
+      }
     }
   });
 });
