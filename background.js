@@ -41,69 +41,34 @@ class MarkdownConverter {
 
   extractTextContent(html) {
     try {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(html, 'text/html');
-      this.removeUnwantedElements(doc);
-      const body = doc.body;
-      if (!body) return '';
-      const markdown = this.nodeToMarkdown(body);
-      return this.cleanMarkdown(markdown);
+      // Service workers don't have DOMParser, so use regex-based extraction
+      // Remove script and style tags
+      let text = html.replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '');
+      text = text.replace(/<style\b[^<]*(?:(?!<\/style>)<[^<]*)*<\/style>/gi, '');
+      
+      // Remove HTML tags but keep the content
+      text = text.replace(/<[^>]+>/g, ' ');
+      
+      // Decode HTML entities
+      text = text.replace(/&nbsp;/g, ' ');
+      text = text.replace(/&amp;/g, '&');
+      text = text.replace(/&lt;/g, '<');
+      text = text.replace(/&gt;/g, '>');
+      text = text.replace(/&quot;/g, '"');
+      text = text.replace(/&#39;/g, "'");
+      
+      // Clean up whitespace
+      text = text.replace(/\s+/g, ' ').trim();
+      
+      return text;
     } catch (error) {
       console.error('Error extracting text:', error);
       return '';
     }
   }
 
-  removeUnwantedElements(doc) {
-    const selectors = ['script', 'style', 'noscript', 'iframe', 'img', 'video', 'audio', 'nav', 'header', 'footer', 'aside'];
-    selectors.forEach(sel => doc.querySelectorAll(sel).forEach(el => el.remove()));
-  }
-
-  nodeToMarkdown(node) {
-    if (!node) return '';
-    if (node.nodeType === Node.TEXT_NODE) return node.textContent.trim();
-    if (node.nodeType !== Node.ELEMENT_NODE) return '';
-
-    const tag = node.tagName.toLowerCase();
-    let md = '';
-
-    switch (tag) {
-      case 'h1': md = '\n# ' + this.getTextContent(node) + '\n\n'; break;
-      case 'h2': md = '\n## ' + this.getTextContent(node) + '\n\n'; break;
-      case 'h3': md = '\n### ' + this.getTextContent(node) + '\n\n'; break;
-      case 'p': md = this.getTextContent(node) + '\n\n'; break;
-      case 'br': md = '\n'; break;
-      case 'ul':
-      case 'ol': md = '\n' + this.convertList(node, tag === 'ol') + '\n'; break;
-      default: md = this.processChildren(node); break;
-    }
-
-    return md;
-  }
-
-  convertList(listNode, ordered = false) {
-    const items = Array.from(listNode.children).filter(c => c.tagName.toLowerCase() === 'li');
-    return items.map((item, i) => {
-      const prefix = ordered ? `${i + 1}. ` : '- ';
-      return prefix + this.getTextContent(item);
-    }).join('\n');
-  }
-
-  getTextContent(node) {
-    if (!node) return '';
-    if (node.nodeType === Node.TEXT_NODE) return node.textContent.trim();
-    return this.processChildren(node);
-  }
-
-  processChildren(node) {
-    if (!node.childNodes || node.childNodes.length === 0) return '';
-    let result = '';
-    node.childNodes.forEach(child => {
-      const childMd = this.nodeToMarkdown(child);
-      if (childMd) result += childMd + ' ';
-    });
-    return result.trim();
-  }
+  // Note: DOM-based functions removed because Service Workers don't have access to DOMParser
+  // Using regex-based text extraction instead (see extractTextContent above)
 
   cleanMarkdown(markdown) {
     if (!markdown) return '';
