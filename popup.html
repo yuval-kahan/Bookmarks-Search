@@ -629,6 +629,9 @@
     .actions-section {
       display: flex;
       justify-content: flex-end;
+      padding: 15px;
+      border-bottom: 1px solid #e0e0e0;
+      background: white;
     }
     
     .delete-all-btn {
@@ -879,11 +882,11 @@
         <button id="applyCustomFilter">Apply Filter</button>
         <button id="clearCustomFilter">Clear</button>
       </div>
-      
-      <!-- Actions -->
-      <div class="actions-section">
-        <button id="deleteAllHistory" class="delete-all-btn">🗑️ Delete All</button>
-      </div>
+    </div>
+    
+    <!-- Actions Section (inside history area) -->
+    <div class="actions-section">
+      <button id="deleteAllHistory" class="delete-all-btn">🗑️ Delete All</button>
     </div>
     
     <div class="history-list" id="historyList">
