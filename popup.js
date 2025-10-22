@@ -391,8 +391,15 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
 
               // Save RAW data if available
               if (response && response.rawData) {
-                lastRawData.sent = response.rawData.sent;
-                lastRawData.received = response.rawData.received;
+                // Check if it's batch processing or regular
+                if (response.rawData.batchDetails) {
+                  // Batch processing - save the entire rawData object
+                  lastRawData = response.rawData;
+                } else {
+                  // Regular processing - save sent and received
+                  lastRawData.sent = response.rawData.sent;
+                  lastRawData.received = response.rawData.received;
+                }
               }
 
               if (abortSearch) {
@@ -787,15 +794,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const progressDiv = document.getElementById('batchProgress');
     const progressText = document.getElementById('batchProgressText');
     const progressBar = document.getElementById('batchProgressBar');
+    const progressTitle = document.getElementById('batchProgressTitle');
     
     // Show progress
     progressDiv.style.display = 'block';
     
-    // Update text
-    progressText.textContent = `Batch ${message.current} of ${message.total}`;
+    // Calculate percentage
+    const percentage = (message.current / message.total) * 100;
+    
+    // Update based on view mode
+    if (progressViewMode === 'percentage') {
+      // Percentage mode - show only percentage
+      progressTitle.textContent = '📦 Processing...';
+      progressText.textContent = `${Math.round(percentage)}%`;
+    } else {
+      // Batch mode - show batch details
+      progressTitle.textContent = '📦 Processing batches...';
+      progressText.textContent = `Batch ${message.current} of ${message.total}`;
+    }
     
     // Update progress bar
-    const percentage = (message.current / message.total) * 100;
     progressBar.style.width = `${percentage}%`;
     
     // Hide when complete
@@ -810,5 +828,54 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Hide progress on new search
 const originalSearchFunction = document.getElementById('searchBtn').onclick;
 document.getElementById('searchBtn').addEventListener('click', () => {
-  document.getElementById('batchProgress').style.display = 'none';
+  const progressDiv = document.getElementById('batchProgress');
+  progressDiv.style.display = 'none';
+  // Reset progress display for next search
+  updateProgressDisplay();
 });
+
+// Progress view toggle (batch details vs percentage only)
+let progressViewMode = 'percentage'; // 'batch' or 'percentage' - default is percentage
+
+// Load progress view preference
+chrome.storage.local.get(['progressViewMode'], (data) => {
+  progressViewMode = data.progressViewMode || 'percentage';
+});
+
+// Toggle progress view
+document.getElementById('progressToggleIcon').addEventListener('click', () => {
+  // Toggle mode
+  progressViewMode = progressViewMode === 'batch' ? 'percentage' : 'batch';
+  
+  // Save preference
+  chrome.storage.local.set({ progressViewMode });
+  
+  // Update current display if progress is visible
+  const progressDiv = document.getElementById('batchProgress');
+  if (progressDiv.style.display !== 'none') {
+    updateProgressDisplay();
+  }
+  
+  // Visual feedback - rotate icon
+  const icon = document.getElementById('progressToggleIcon');
+  icon.style.transform = 'rotate(180deg)';
+  setTimeout(() => {
+    icon.style.transform = 'rotate(0deg)';
+  }, 200);
+});
+
+// Update progress display based on mode
+function updateProgressDisplay() {
+  const titleElement = document.getElementById('batchProgressTitle');
+  const textElement = document.getElementById('batchProgressText');
+  
+  if (progressViewMode === 'percentage') {
+    // Percentage mode - show only percentage
+    titleElement.textContent = '📦 Processing...';
+    // Text will be updated by the message listener to show percentage
+  } else {
+    // Batch mode - show batch details
+    titleElement.textContent = '📦 Processing batches...';
+    // Text will be updated by the message listener to show batch number
+  }
+}

@@ -57,56 +57,135 @@ function showRawModal(rawData) {
           overflow-y: auto;
           flex: 1;
         ">
-          <div style="margin-bottom: 25px;">
+          ${rawData.batchDetails ? `
             <div style="
-              font-size: 14px;
-              font-weight: 600;
-              color: #667eea;
-              margin-bottom: 10px;
-              display: flex;
-              align-items: center;
-              gap: 5px;
-            ">📨 Sent to AI:</div>
-            <div style="
-              background: #f8f9fa;
-              padding: 15px;
+              background: #f0f4ff;
+              padding: 12px;
               border-radius: 8px;
-              border-left: 4px solid #667eea;
-              font-family: 'Courier New', monospace;
-              font-size: 12px;
-              line-height: 1.8;
-              white-space: pre-wrap;
-              word-break: break-word;
-              max-height: 250px;
-              overflow-y: auto;
-              color: #333;
-            ">${rawData.sent || 'No data sent yet'}</div>
-          </div>
-          <div>
-            <div style="
-              font-size: 14px;
-              font-weight: 600;
+              margin-bottom: 20px;
+              border-left: 3px solid #667eea;
+              font-size: 13px;
               color: #667eea;
-              margin-bottom: 10px;
-              display: flex;
-              align-items: center;
-              gap: 5px;
-            ">📥 Received from AI:</div>
-            <div style="
-              background: #f8f9fa;
-              padding: 15px;
-              border-radius: 8px;
-              border-left: 4px solid #48bb78;
-              font-family: 'Courier New', monospace;
-              font-size: 12px;
-              line-height: 1.8;
-              white-space: pre-wrap;
-              word-break: break-word;
-              max-height: 150px;
-              overflow-y: auto;
-              color: #333;
-            ">${rawData.received || 'No data received yet'}</div>
-          </div>
+              font-weight: 600;
+            ">
+              📦 Batch Processing: ${rawData.batches} batches (${rawData.batchSize} bookmarks per batch)
+            </div>
+            ${rawData.batchDetails.map(batch => `
+              <div style="margin-bottom: 30px; border: 2px solid #e0e7ff; border-radius: 8px; padding: 15px; background: #fafbff;">
+                <div style="
+                  font-size: 13px;
+                  font-weight: 600;
+                  color: #667eea;
+                  margin-bottom: 15px;
+                  padding-bottom: 10px;
+                  border-bottom: 1px solid #e0e7ff;
+                ">Batch ${batch.batchNumber} of ${rawData.batches}</div>
+                
+                <div style="margin-bottom: 15px;">
+                  <div style="
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #667eea;
+                    margin-bottom: 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                  ">📨 Sent:</div>
+                  <div style="
+                    background: #f8f9fa;
+                    padding: 12px;
+                    border-radius: 6px;
+                    border-left: 3px solid #667eea;
+                    font-family: 'Courier New', monospace;
+                    font-size: 11px;
+                    line-height: 1.6;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    max-height: 200px;
+                    overflow-y: auto;
+                    color: #333;
+                  ">${batch.sent}</div>
+                </div>
+                
+                <div>
+                  <div style="
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: #48bb78;
+                    margin-bottom: 8px;
+                    display: flex;
+                    align-items: center;
+                    gap: 5px;
+                  ">📥 Received:</div>
+                  <div style="
+                    background: #f8f9fa;
+                    padding: 12px;
+                    border-radius: 6px;
+                    border-left: 3px solid #48bb78;
+                    font-family: 'Courier New', monospace;
+                    font-size: 11px;
+                    line-height: 1.6;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                    max-height: 100px;
+                    overflow-y: auto;
+                    color: #333;
+                  ">${batch.received}</div>
+                </div>
+              </div>
+            `).join('')}
+          ` : `
+            <div style="margin-bottom: 25px;">
+              <div style="
+                font-size: 14px;
+                font-weight: 600;
+                color: #667eea;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+              ">📨 Sent to AI:</div>
+              <div style="
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #667eea;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.8;
+                white-space: pre-wrap;
+                word-break: break-word;
+                max-height: 250px;
+                overflow-y: auto;
+                color: #333;
+              ">${rawData.sent || 'No data sent yet'}</div>
+            </div>
+            <div>
+              <div style="
+                font-size: 14px;
+                font-weight: 600;
+                color: #667eea;
+                margin-bottom: 10px;
+                display: flex;
+                align-items: center;
+                gap: 5px;
+              ">📥 Received from AI:</div>
+              <div style="
+                background: #f8f9fa;
+                padding: 15px;
+                border-radius: 8px;
+                border-left: 4px solid #48bb78;
+                font-family: 'Courier New', monospace;
+                font-size: 12px;
+                line-height: 1.8;
+                white-space: pre-wrap;
+                word-break: break-word;
+                max-height: 150px;
+                overflow-y: auto;
+                color: #333;
+              ">${rawData.received || 'No data received yet'}</div>
+            </div>
+          `}
         </div>
       </div>
     </div>

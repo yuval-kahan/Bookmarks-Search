@@ -547,8 +547,9 @@
     <button id="rawBtn">RAW</button>
     
     <div id="batchProgress" style="display: none; background: #f0f4ff; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 3px solid #667eea;">
-      <div style="font-size: 13px; font-weight: 600; color: #667eea; margin-bottom: 6px;">
-        📦 Processing batches...
+      <div style="font-size: 13px; font-weight: 600; color: #667eea; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
+        <span id="progressToggleIcon" style="cursor: pointer; font-size: 16px; transition: transform 0.2s ease;" title="Toggle progress view">🔀</span>
+        <span id="batchProgressTitle">📦 Processing batches...</span>
       </div>
       <div id="batchProgressText" style="font-size: 12px; color: #666;">
         Batch 1 of 10

@@ -165,7 +165,7 @@ Your response:`;
   
   currentSearchAbortController = new AbortController();
   
-  const resultNumbers = await processBatchSequentially(
+  const batchResult = await processBatchSequentially(
     batches, 
     query, 
     'ollama',
@@ -174,14 +174,15 @@ Your response:`;
     usePrompt
   );
   
-  const results = aggregateResults(resultNumbers, numberedBookmarks);
+  const results = aggregateResults(batchResult.numbers, numberedBookmarks);
   
   return { 
     results, 
     rawData: { 
       batches: batches.length, 
       totalBookmarks: allBookmarks.length,
-      batchSize: batchSize
+      batchSize: batchSize,
+      batchDetails: batchResult.batchDetails
     } 
   };
 }
@@ -203,7 +204,7 @@ async function aiSearchWithAPI(query, provider, apiKey, model, customPrompt, use
     
     currentSearchAbortController = new AbortController();
     
-    const resultNumbers = await processBatchSequentially(
+    const batchResult = await processBatchSequentially(
       batches, 
       query, 
       'api',
@@ -212,14 +213,15 @@ async function aiSearchWithAPI(query, provider, apiKey, model, customPrompt, use
       usePrompt
     );
     
-    const results = aggregateResults(resultNumbers, numberedBookmarks);
+    const results = aggregateResults(batchResult.numbers, numberedBookmarks);
     
     return { 
       results, 
       rawData: { 
         batches: batches.length, 
         totalBookmarks: allBookmarks.length,
-        batchSize: batchSize
+        batchSize: batchSize,
+        batchDetails: batchResult.batchDetails
       } 
     };
   }
@@ -1034,6 +1036,7 @@ function aggregateResults(globalNumbers, allBookmarks) {
 // Process batches sequentially
 async function processBatchSequentially(batches, query, provider, settings, customPrompt, usePrompt) {
   const allResultNumbers = [];
+  const batchDetails = []; // Store details of each batch for RAW data
   
   for (let i = 0; i < batches.length; i++) {
     try {
@@ -1069,17 +1072,29 @@ async function processBatchSequentially(batches, query, provider, settings, cust
         aiResponse = await sendToAPIProvider(prompt, settings.apiProvider, settings.apiKey, settings.apiModel);
       }
       
+      // Store batch details for RAW data
+      batchDetails.push({
+        batchNumber: i + 1,
+        sent: prompt,
+        received: aiResponse
+      });
+      
       // Parse response
       const numbers = parseAIResponse(aiResponse);
       allResultNumbers.push(...numbers);
       
     } catch (error) {
       console.error(`Batch ${i + 1} failed:`, error);
+      batchDetails.push({
+        batchNumber: i + 1,
+        sent: 'Error occurred',
+        received: error.message
+      });
       // Continue with other batches
     }
   }
   
-  return allResultNumbers;
+  return { numbers: allResultNumbers, batchDetails };
 }
 
 // Send to Ollama
