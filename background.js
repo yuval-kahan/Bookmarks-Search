@@ -1,6 +1,198 @@
 // Global abort controller for search requests
 let currentSearchAbortController = null;
 
+// ===== Markdown Converter =====
+class MarkdownConverter {
+  constructor(options = {}) {
+    this.maxPageSize = (options.maxPageSize || 500) * 1024;
+    this.timeout = options.timeout || 10000;
+  }
+
+  async convertToMarkdown(url) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+      const response = await fetch(url, {
+        signal: controller.signal,
+        mode: 'cors',
+        credentials: 'omit'
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const html = await response.text();
+
+      if (html.length > this.maxPageSize) {
+        return this.extractTextContent(html.substring(0, this.maxPageSize));
+      }
+
+      return this.extractTextContent(html);
+
+    } catch (error) {
+      console.warn(`Failed to convert ${url}:`, error.message);
+      return null;
+    }
+  }
+
+  extractTextContent(html) {
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, 'text/html');
+      this.removeUnwantedElements(doc);
+      const body = doc.body;
+      if (!body) return '';
+      const markdown = this.nodeToMarkdown(body);
+      return this.cleanMarkdown(markdown);
+    } catch (error) {
+      console.error('Error extracting text:', error);
+      return '';
+    }
+  }
+
+  removeUnwantedElements(doc) {
+    const selectors = ['script', 'style', 'noscript', 'iframe', 'img', 'video', 'audio', 'nav', 'header', 'footer', 'aside'];
+    selectors.forEach(sel => doc.querySelectorAll(sel).forEach(el => el.remove()));
+  }
+
+  nodeToMarkdown(node) {
+    if (!node) return '';
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent.trim();
+    if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+    const tag = node.tagName.toLowerCase();
+    let md = '';
+
+    switch (tag) {
+      case 'h1': md = '\n# ' + this.getTextContent(node) + '\n\n'; break;
+      case 'h2': md = '\n## ' + this.getTextContent(node) + '\n\n'; break;
+      case 'h3': md = '\n### ' + this.getTextContent(node) + '\n\n'; break;
+      case 'p': md = this.getTextContent(node) + '\n\n'; break;
+      case 'br': md = '\n'; break;
+      case 'ul':
+      case 'ol': md = '\n' + this.convertList(node, tag === 'ol') + '\n'; break;
+      default: md = this.processChildren(node); break;
+    }
+
+    return md;
+  }
+
+  convertList(listNode, ordered = false) {
+    const items = Array.from(listNode.children).filter(c => c.tagName.toLowerCase() === 'li');
+    return items.map((item, i) => {
+      const prefix = ordered ? `${i + 1}. ` : '- ';
+      return prefix + this.getTextContent(item);
+    }).join('\n');
+  }
+
+  getTextContent(node) {
+    if (!node) return '';
+    if (node.nodeType === Node.TEXT_NODE) return node.textContent.trim();
+    return this.processChildren(node);
+  }
+
+  processChildren(node) {
+    if (!node.childNodes || node.childNodes.length === 0) return '';
+    let result = '';
+    node.childNodes.forEach(child => {
+      const childMd = this.nodeToMarkdown(child);
+      if (childMd) result += childMd + ' ';
+    });
+    return result.trim();
+  }
+
+  cleanMarkdown(markdown) {
+    if (!markdown) return '';
+    return markdown
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n{3,}/g, '\n\n')
+      .replace(/^\s+|\s+$/g, '')
+      .replace(/\n /g, '\n')
+      .replace(/ \n/g, '\n');
+  }
+}
+
+// ===== Markdown Cache =====
+class MarkdownCache {
+  constructor() {
+    this.CACHE_KEY = 'markdownCache';
+    this.SETTINGS_KEY = 'deepSearchSettings';
+  }
+
+  async get(url) {
+    try {
+      const cache = await this.getCache();
+      const entry = cache[url];
+      if (!entry || this.isExpired(entry)) {
+        if (entry) await this.remove(url);
+        return null;
+      }
+      return entry.content;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  async set(url, content) {
+    try {
+      const cache = await this.getCache();
+      cache[url] = {
+        content: content,
+        timestamp: Date.now(),
+        size: content.length,
+        url: url
+      };
+      await this.saveCache(cache);
+    } catch (error) {
+      console.error('Error setting cache:', error);
+    }
+  }
+
+  async remove(url) {
+    try {
+      const cache = await this.getCache();
+      delete cache[url];
+      await this.saveCache(cache);
+    } catch (error) {
+      console.error('Error removing cache:', error);
+    }
+  }
+
+  isExpired(entry) {
+    if (!entry || !entry.timestamp) return true;
+    const maxAge = 24 * 60 * 60 * 1000; // 24 hours default
+    return (Date.now() - entry.timestamp) > maxAge;
+  }
+
+  async getCache() {
+    return new Promise((resolve) => {
+      chrome.storage.local.get([this.CACHE_KEY], (data) => {
+        resolve(data[this.CACHE_KEY] || {});
+      });
+    });
+  }
+
+  async saveCache(cache) {
+    return new Promise((resolve, reject) => {
+      chrome.storage.local.set({ [this.CACHE_KEY]: cache }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve();
+        }
+      });
+    });
+  }
+}
+
+// Initialize converter and cache
+const markdownConverter = new MarkdownConverter();
+const markdownCache = new MarkdownCache();
+
 // Helper function to get API URL for different providers
 function getAPIUrl(provider, model, apiKey) {
   const urls = {
@@ -64,21 +256,7 @@ async function formatBookmarkList(bookmarks) {
       };
       
       const formattedList = bookmarks.map((b, i) => {
-        let parts = [`${i + 1}.`];
-        
-        if (fields.includeTitle) {
-          parts.push(b.title);
-        }
-        
-        if (fields.includeUrl) {
-          parts.push(fields.includeTitle ? `- ${b.url}` : b.url);
-        }
-        
-        if (fields.includeFolder && b.path) {
-          parts.push(`(Folder: ${b.path})`);
-        }
-        
-        return parts.join(' ');
+        return formatBookmarkWithContent(b, i, fields);
       }).join("\n");
       
       resolve(formattedList);
@@ -86,12 +264,84 @@ async function formatBookmarkList(bookmarks) {
   });
 }
 
+// Add Markdown content to bookmarks if Deep Search is enabled
+async function enrichBookmarksWithMarkdown(bookmarks) {
+  // Get Deep Search settings
+  const settings = await new Promise((resolve) => {
+    chrome.storage.local.get(['deepSearchSettings'], (data) => {
+      resolve(data.deepSearchSettings || { enabled: false });
+    });
+  });
+
+  if (!settings.enabled) {
+    return bookmarks; // Deep Search disabled, return as-is
+  }
+
+  // Update converter settings
+  if (settings.maxPageSize) {
+    markdownConverter.maxPageSize = settings.maxPageSize * 1024;
+  }
+
+  // Process bookmarks
+  const enrichedBookmarks = [];
+  
+  for (const bookmark of bookmarks) {
+    // Check cache first
+    let markdown = await markdownCache.get(bookmark.url);
+    
+    if (!markdown) {
+      // Convert to Markdown
+      markdown = await markdownConverter.convertToMarkdown(bookmark.url);
+      
+      // Cache if successful
+      if (markdown) {
+        await markdownCache.set(bookmark.url, markdown);
+      }
+    }
+    
+    // Add to bookmark
+    enrichedBookmarks.push({
+      ...bookmark,
+      content: markdown || undefined
+    });
+  }
+  
+  return enrichedBookmarks;
+}
+
+// Format bookmark with optional Markdown content
+function formatBookmarkWithContent(bookmark, index, fields) {
+  let parts = [`${index + 1}.`];
+  
+  if (fields.includeTitle) {
+    parts.push(bookmark.title);
+  }
+  
+  if (fields.includeUrl) {
+    parts.push(fields.includeTitle ? `- ${bookmark.url}` : bookmark.url);
+  }
+  
+  if (fields.includeFolder && bookmark.path) {
+    parts.push(`(Folder: ${bookmark.path})`);
+  }
+  
+  // Add Markdown content if available
+  if (bookmark.content) {
+    parts.push(`\nContent: ${bookmark.content.substring(0, 1000)}...`); // Limit to 1000 chars per bookmark
+  }
+  
+  return parts.join(' ');
+}
+
 // AI search using Ollama
 async function aiSearchWithOllama(query, ollamaUrl, ollamaModel, customPrompt, usePrompt) {
   const allBookmarks = await getAllBookmarks();
   
+  // Enrich with Markdown if Deep Search enabled
+  const enrichedBookmarks = await enrichBookmarksWithMarkdown(allBookmarks);
+  
   // Assign global numbers to bookmarks
-  const numberedBookmarks = assignGlobalNumbers(allBookmarks);
+  const numberedBookmarks = assignGlobalNumbers(enrichedBookmarks);
   
   // Get batch settings for Ollama
   const batchSize = await getBatchSettings('ollama');
@@ -947,17 +1197,55 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
-// Divide bookmarks into batches
-function divideToBatches(bookmarks, batchSize) {
+// Divide bookmarks into batches with dynamic sizing for Deep Search
+async function divideToBatches(bookmarks, batchSize) {
   if (!batchSize || batchSize === 'none') {
     return [bookmarks]; // No batching - return all as single batch
   }
   
-  const size = parseInt(batchSize);
-  const batches = [];
+  // Check if Deep Search is enabled
+  const deepSearchSettings = await new Promise((resolve) => {
+    chrome.storage.local.get(['deepSearchSettings'], (data) => {
+      resolve(data.deepSearchSettings || { enabled: false });
+    });
+  });
   
-  for (let i = 0; i < bookmarks.length; i += size) {
-    batches.push(bookmarks.slice(i, i + size));
+  // Use Deep Search batch size if enabled and bookmarks have content
+  let size = parseInt(batchSize);
+  const hasMarkdownContent = bookmarks.some(b => b.content);
+  
+  if (deepSearchSettings.enabled && hasMarkdownContent) {
+    // Use smaller batch size for Deep Search
+    size = Math.min(size, deepSearchSettings.batchSize || 3);
+  }
+  
+  const batches = [];
+  let currentBatch = [];
+  let currentSize = 0;
+  const maxBatchSize = 100000; // 100KB per batch
+  
+  for (const bookmark of bookmarks) {
+    // Estimate size
+    const estimatedSize = 
+      (bookmark.title?.length || 0) + 
+      (bookmark.url?.length || 0) + 
+      (bookmark.content?.length || 0);
+    
+    // Check if adding this bookmark would exceed limits
+    if (currentBatch.length >= size || 
+        (currentSize + estimatedSize > maxBatchSize && currentBatch.length > 0)) {
+      batches.push(currentBatch);
+      currentBatch = [];
+      currentSize = 0;
+    }
+    
+    currentBatch.push(bookmark);
+    currentSize += estimatedSize;
+  }
+  
+  // Add remaining bookmarks
+  if (currentBatch.length > 0) {
+    batches.push(currentBatch);
   }
   
   return batches;
@@ -966,9 +1254,16 @@ function divideToBatches(bookmarks, batchSize) {
 // Get batch settings for current provider
 async function getBatchSettings(provider) {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['apiBatchSize', 'ollamaBatchSize'], (data) => {
+    chrome.storage.local.get(['apiBatchSize', 'ollamaBatchSize', 'deepSearchSettings'], (data) => {
       const key = provider === 'ollama' ? 'ollamaBatchSize' : 'apiBatchSize';
-      const batchSize = data[key] || (provider === 'ollama' ? '25' : 'none');
+      let batchSize = data[key] || (provider === 'ollama' ? '25' : 'none');
+      
+      // Override with Deep Search batch size if enabled
+      const deepSearchSettings = data.deepSearchSettings || { enabled: false };
+      if (deepSearchSettings.enabled) {
+        batchSize = deepSearchSettings.batchSize || 3;
+      }
+      
       resolve(batchSize);
     });
   });
@@ -1215,3 +1510,50 @@ async function sendToAPIProvider(prompt, provider, apiKey, model) {
       return data.choices[0].message.content.trim();
   }
 }
+
+
+// Clear expired cache on startup
+chrome.runtime.onStartup.addListener(async () => {
+  try {
+    const cache = await markdownCache.getCache();
+    const urls = Object.keys(cache);
+    let removedCount = 0;
+    
+    for (const url of urls) {
+      if (markdownCache.isExpired(cache[url])) {
+        delete cache[url];
+        removedCount++;
+      }
+    }
+    
+    if (removedCount > 0) {
+      await markdownCache.saveCache(cache);
+      console.log(`Cleared ${removedCount} expired cache entries on startup`);
+    }
+  } catch (error) {
+    console.error('Error clearing expired cache on startup:', error);
+  }
+});
+
+// Also clear on install
+chrome.runtime.onInstalled.addListener(async () => {
+  try {
+    const cache = await markdownCache.getCache();
+    const urls = Object.keys(cache);
+    let removedCount = 0;
+    
+    for (const url of urls) {
+      if (markdownCache.isExpired(cache[url])) {
+        delete cache[url];
+        removedCount++;
+      }
+    }
+    
+    if (removedCount > 0) {
+      await markdownCache.saveCache(cache);
+      console.log(`Cleared ${removedCount} expired cache entries on install`);
+    }
+  } catch (error) {
+    console.error('Error clearing expired cache on install:', error);
+  }
+});

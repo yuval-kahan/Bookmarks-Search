@@ -172,6 +172,84 @@ function saveUsePromptState() {
   chrome.storage.local.set({ usePrompt: usePrompt });
 }
 
+// Load Deep Search state
+function loadDeepSearchState() {
+  chrome.storage.local.get(['deepSearchSettings'], (data) => {
+    const settings = data.deepSearchSettings || {
+      enabled: false,
+      preMarkdown: false
+    };
+    
+    const deepSearchCheckbox = document.getElementById('deepSearchCheckbox');
+    const preMarkdownCheckbox = document.getElementById('preMarkdownCheckbox');
+    const preMarkdownLabel = preMarkdownCheckbox.closest('.pre-markdown-label');
+    
+    deepSearchCheckbox.checked = settings.enabled;
+    preMarkdownCheckbox.checked = settings.preMarkdown;
+    
+    // Update Pre Markdown enabled state
+    if (settings.enabled) {
+      preMarkdownCheckbox.disabled = false;
+      preMarkdownLabel.classList.remove('disabled');
+      preMarkdownLabel.style.opacity = '1';
+      preMarkdownLabel.style.cursor = 'pointer';
+      preMarkdownCheckbox.style.cursor = 'pointer';
+    } else {
+      preMarkdownCheckbox.disabled = true;
+      preMarkdownCheckbox.checked = false;
+      preMarkdownLabel.classList.add('disabled');
+      preMarkdownLabel.style.opacity = '0.6';
+      preMarkdownLabel.style.cursor = 'not-allowed';
+      preMarkdownCheckbox.style.cursor = 'not-allowed';
+    }
+  });
+}
+
+// Save Deep Search state
+function saveDeepSearchState() {
+  const deepSearchEnabled = document.getElementById('deepSearchCheckbox').checked;
+  const preMarkdownEnabled = document.getElementById('preMarkdownCheckbox').checked;
+  
+  chrome.storage.local.get(['deepSearchSettings'], (data) => {
+    const settings = data.deepSearchSettings || {
+      batchSize: 3,
+      cacheDuration: 24,
+      maxPageSize: 500
+    };
+    
+    settings.enabled = deepSearchEnabled;
+    settings.preMarkdown = preMarkdownEnabled;
+    
+    chrome.storage.local.set({ deepSearchSettings: settings });
+  });
+}
+
+// Handle Deep Search checkbox change
+function handleDeepSearchChange() {
+  const deepSearchCheckbox = document.getElementById('deepSearchCheckbox');
+  const preMarkdownCheckbox = document.getElementById('preMarkdownCheckbox');
+  const preMarkdownLabel = preMarkdownCheckbox.closest('.pre-markdown-label');
+  
+  if (deepSearchCheckbox.checked) {
+    // Enable Pre Markdown checkbox
+    preMarkdownCheckbox.disabled = false;
+    preMarkdownLabel.classList.remove('disabled');
+    preMarkdownLabel.style.opacity = '1';
+    preMarkdownLabel.style.cursor = 'pointer';
+    preMarkdownCheckbox.style.cursor = 'pointer';
+  } else {
+    // Disable and uncheck Pre Markdown
+    preMarkdownCheckbox.disabled = true;
+    preMarkdownCheckbox.checked = false;
+    preMarkdownLabel.classList.add('disabled');
+    preMarkdownLabel.style.opacity = '0.6';
+    preMarkdownLabel.style.cursor = 'not-allowed';
+    preMarkdownCheckbox.style.cursor = 'not-allowed';
+  }
+  
+  saveDeepSearchState();
+}
+
 // Load and display current search mode
 function updateSearchModeIndicator() {
   chrome.storage.local.get(
@@ -250,11 +328,18 @@ document.getElementById("settingsBtn").addEventListener("click", () => {
 // Use Prompt checkbox event listener
 document.getElementById('usePromptCheckbox').addEventListener('change', saveUsePromptState);
 
+// Deep Search checkbox event listeners
+document.getElementById('deepSearchCheckbox').addEventListener('change', handleDeepSearchChange);
+document.getElementById('preMarkdownCheckbox').addEventListener('change', saveDeepSearchState);
+
 // Update indicator on load
 updateSearchModeIndicator();
 
 // Load Use Prompt state on page load
 loadUsePromptState();
+
+// Load Deep Search state on page load
+loadDeepSearchState();
 
 // State management functions
 function savePopupState(state) {

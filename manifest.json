@@ -25,7 +25,8 @@
     "https://api.cloudflare.com/*",
     "https://openrouter.ai/*",
     "https://api.novita.ai/*",
-    "https://*.lepton.run/*"
+    "https://*.lepton.run/*",
+    "<all_urls>"
   ],
   "background": {
     "service_worker": "background.js"

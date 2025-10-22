@@ -1841,3 +1841,150 @@ document.getElementById('githubModal').addEventListener('click', (e) => {
     e.target.style.display = 'none';
   }
 });
+
+// Deep Search Settings Functions
+async function loadDeepSearchSettings() {
+  chrome.storage.local.get(['deepSearchSettings'], (data) => {
+    const settings = data.deepSearchSettings || {
+      enabled: false,
+      preMarkdown: false,
+      batchSize: 3,
+      cacheDuration: 24,
+      maxPageSize: 500
+    };
+    
+    document.getElementById('deepSearchBatchSize').value = settings.batchSize || 3;
+    document.getElementById('markdownCacheDuration').value = settings.cacheDuration || 24;
+    document.getElementById('maxPageSize').value = settings.maxPageSize || 500;
+    
+    // Load cache stats
+    loadCacheStats();
+  });
+}
+
+async function loadCacheStats() {
+  try {
+    // Get cache from storage
+    chrome.storage.local.get(['markdownCache'], (data) => {
+      const cache = data.markdownCache || {};
+      const urls = Object.keys(cache);
+      
+      let totalSize = 0;
+      let expiredCount = 0;
+      const now = Date.now();
+      
+      chrome.storage.local.get(['deepSearchSettings'], (settingsData) => {
+        const settings = settingsData.deepSearchSettings || { cacheDuration: 24 };
+        const maxAge = settings.cacheDuration * 60 * 60 * 1000;
+        
+        for (const url of urls) {
+          const entry = cache[url];
+          if (entry) {
+            totalSize += entry.size || 0;
+            const age = now - (entry.timestamp || 0);
+            if (age > maxAge) {
+              expiredCount++;
+            }
+          }
+        }
+        
+        const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(2);
+        const validEntries = urls.length - expiredCount;
+        
+        const statsDiv = document.getElementById('cacheStats');
+        if (urls.length === 0) {
+          statsDiv.textContent = '📊 Cache is empty';
+        } else {
+          statsDiv.textContent = `📊 ${validEntries} valid entries, ${expiredCount} expired | ${totalSizeMB} MB`;
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error loading cache stats:', error);
+    document.getElementById('cacheStats').textContent = '❌ Error loading stats';
+  }
+}
+
+function saveDeepSearchSettings() {
+  const batchSize = parseInt(document.getElementById('deepSearchBatchSize').value);
+  const cacheDuration = parseInt(document.getElementById('markdownCacheDuration').value);
+  const maxPageSize = parseInt(document.getElementById('maxPageSize').value);
+  
+  // Validate inputs
+  if (batchSize < 1 || batchSize > 10) {
+    alert('Batch size must be between 1 and 10');
+    return;
+  }
+  
+  if (cacheDuration < 1 || cacheDuration > 168) {
+    alert('Cache duration must be between 1 and 168 hours');
+    return;
+  }
+  
+  if (maxPageSize < 50 || maxPageSize > 1000) {
+    alert('Max page size must be between 50 and 1000 KB');
+    return;
+  }
+  
+  chrome.storage.local.get(['deepSearchSettings'], (data) => {
+    const settings = data.deepSearchSettings || {
+      enabled: false,
+      preMarkdown: false
+    };
+    
+    settings.batchSize = batchSize;
+    settings.cacheDuration = cacheDuration;
+    settings.maxPageSize = maxPageSize;
+    
+    chrome.storage.local.set({ deepSearchSettings: settings }, () => {
+      // Show success feedback
+      const saveBtn = document.getElementById('batchSaveBtn');
+      const originalText = saveBtn.textContent;
+      saveBtn.textContent = '✓ Saved!';
+      saveBtn.style.background = '#48bb78';
+      
+      setTimeout(() => {
+        saveBtn.textContent = originalText;
+        saveBtn.style.background = '';
+      }, 1500);
+    });
+  });
+}
+
+async function clearMarkdownCache() {
+  const confirmed = confirm('Are you sure you want to clear the Markdown cache? This will remove all converted page content.');
+  
+  if (confirmed) {
+    try {
+      await chrome.storage.local.set({ markdownCache: {} });
+      
+      // Update stats
+      document.getElementById('cacheStats').textContent = '✓ Cache cleared successfully';
+      
+      setTimeout(() => {
+        loadCacheStats();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      alert('Failed to clear cache: ' + error.message);
+    }
+  }
+}
+
+// Event listeners for Deep Search settings
+document.getElementById('clearMarkdownCacheBtn').addEventListener('click', clearMarkdownCache);
+
+// Load Deep Search settings when batch settings screen opens
+const originalOpenBatchSettings = openBatchSettings;
+openBatchSettings = function() {
+  originalOpenBatchSettings();
+  loadDeepSearchSettings();
+};
+
+// Save Deep Search settings when batch save button is clicked
+const originalSaveBatchSettings = saveBatchSettings;
+saveBatchSettings = function() {
+  originalSaveBatchSettings();
+  saveDeepSearchSettings();
+};

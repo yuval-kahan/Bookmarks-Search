@@ -1116,8 +1116,67 @@
         ℹ <strong>How it works:</strong> Your bookmarks are numbered (1, 2, 3...) and divided into batches. Each batch is sent separately to the AI, and results are combined automatically.
       </div>
       
+      <hr style="border: none; border-top: 2px solid #e0e0e0; margin: 30px 0;">
+      
+      <!-- Deep Search Settings -->
+      <div id="deepSearchSettings">
+        <h2 style="font-size: 16px; font-weight: 600; color: #667eea; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+          🔍 Deep Search Settings
+        </h2>
+        
+        <div style="background: #f0f4ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #667eea;">
+          <strong>Deep Search Configuration:</strong><br>
+          <span style="font-size: 12px; color: #666;">When Deep Search is enabled, the system fetches webpage content and converts it to Markdown. Use smaller batch sizes due to larger data.</span>
+        </div>
+        
+        <div style="display: flex; flex-direction: column; gap: 20px;">
+          <!-- Deep Search Batch Size -->
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 14px; color: #333; margin-bottom: 8px;">
+              🔢 Batch Size (with Markdown content):
+            </label>
+            <input type="number" id="deepSearchBatchSize" min="1" max="10" value="3" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 13px; transition: border-color 0.3s ease;">
+            <div style="font-size: 11px; color: #666; margin-top: 6px;">
+              ⚠️ Smaller batches recommended (1-10). Default: 3
+            </div>
+          </div>
+          
+          <!-- Cache Duration -->
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 14px; color: #333; margin-bottom: 8px;">
+              ⏱️ Markdown Cache Duration (hours):
+            </label>
+            <input type="number" id="markdownCacheDuration" min="1" max="168" value="24" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 13px; transition: border-color 0.3s ease;">
+            <div style="font-size: 11px; color: #666; margin-top: 6px;">
+              📅 How long to keep converted pages (1-168 hours). Default: 24
+            </div>
+          </div>
+          
+          <!-- Max Page Size -->
+          <div>
+            <label style="display: block; font-weight: 600; font-size: 14px; color: #333; margin-bottom: 8px;">
+              📄 Max Page Size (KB):
+            </label>
+            <input type="number" id="maxPageSize" min="50" max="1000" value="500" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 13px; transition: border-color 0.3s ease;">
+            <div style="font-size: 11px; color: #666; margin-top: 6px;">
+              📏 Maximum page size to process (50-1000 KB). Default: 500
+            </div>
+          </div>
+          
+          <!-- Clear Cache Button -->
+          <div>
+            <button id="clearMarkdownCacheBtn" style="width: 100%; padding: 12px; background: #ed8936; color: white; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;">
+              🗑️ Clear Markdown Cache
+            </button>
+            <div id="cacheStats" style="font-size: 11px; color: #666; margin-top: 8px; text-align: center;">
+              Loading cache statistics...
+            </div>
+          </div>
+        </div>
+      </div>
+      
       <div class="prompt-editor-buttons" style="margin-top: 20px;">
-        <button class="prompt-save-btn" id="batchSaveBtn"> Save Settings</button>
+        <button class="prompt-save-btn" id="batchSaveBtn">💾 Save Settings</button>
       </div>
     </div>
   </div>
