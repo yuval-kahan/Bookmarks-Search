@@ -1040,6 +1040,12 @@ async function processBatchSequentially(batches, query, provider, settings, cust
   
   for (let i = 0; i < batches.length; i++) {
     try {
+      // Check if search was aborted
+      if (currentSearchAbortController?.signal.aborted) {
+        console.log('Search aborted, stopping batch processing');
+        break;
+      }
+      
       // Send progress update to popup
       chrome.runtime.sendMessage({
         action: 'batchProgress',
@@ -1084,13 +1090,19 @@ async function processBatchSequentially(batches, query, provider, settings, cust
       allResultNumbers.push(...numbers);
       
     } catch (error) {
+      // Check if it's an abort error
+      if (error.name === 'AbortError' || currentSearchAbortController?.signal.aborted) {
+        console.log('Search aborted');
+        break; // Stop processing batches
+      }
+      
       console.error(`Batch ${i + 1} failed:`, error);
       batchDetails.push({
         batchNumber: i + 1,
         sent: 'Error occurred',
         received: error.message
       });
-      // Continue with other batches
+      // Continue with other batches only if not aborted
     }
   }
   

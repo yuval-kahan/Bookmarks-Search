@@ -292,11 +292,12 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
     return;
   }
 
-  // Show stop button, disable search button
+  // Show stop button, disable search button and clean button
   searchInProgress = true;
   stopBtn.classList.add("visible");
   searchBtn.disabled = true;
   searchBtn.style.opacity = "0.6";
+  updateCleanButtonState(true); // Disable clean button during search
 
   // Save state - search started
   savePopupState({
@@ -325,6 +326,7 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
 
             if (chrome.runtime.lastError) {
               searchInProgress = false;
+              updateCleanButtonState(false);
               stopBtn.classList.remove("visible");
               searchBtn.disabled = false;
               searchBtn.style.opacity = "1";
@@ -336,6 +338,7 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
 
             if (!response || !response.results) {
               searchInProgress = false;
+              updateCleanButtonState(false);
               stopBtn.classList.remove("visible");
               searchBtn.disabled = false;
               searchBtn.style.opacity = "1";
@@ -409,6 +412,7 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
 
               if (chrome.runtime.lastError) {
                 searchInProgress = false;
+                updateCleanButtonState(false);
                 stopBtn.classList.remove("visible");
                 searchBtn.disabled = false;
                 searchBtn.style.opacity = "1";
@@ -427,6 +431,7 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
 
               if (response.error) {
                 searchInProgress = false;
+                updateCleanButtonState(false);
                 stopBtn.classList.remove("visible");
                 searchBtn.disabled = false;
                 searchBtn.style.opacity = "1";
@@ -445,6 +450,7 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
 
               if (!response || !response.results) {
                 searchInProgress = false;
+                updateCleanButtonState(false);
                 stopBtn.classList.remove("visible");
                 searchBtn.disabled = false;
                 searchBtn.style.opacity = "1";
@@ -477,6 +483,7 @@ function displayResults(results) {
 
   // Hide stop button, enable search button
   searchInProgress = false;
+  updateCleanButtonState(false);
   stopBtn.classList.remove("visible");
   searchBtn.disabled = false;
   searchBtn.style.opacity = "1";
@@ -543,6 +550,7 @@ document.getElementById("stopBtn").addEventListener("click", () => {
   if (searchInProgress) {
     abortSearch = true;
     searchInProgress = false;
+    updateCleanButtonState(false);
 
     const stopBtn = document.getElementById("stopBtn");
     const searchBtn = document.getElementById("searchBtn");
@@ -878,4 +886,36 @@ function updateProgressDisplay() {
     titleElement.textContent = '📦 Processing batches...';
     // Text will be updated by the message listener to show batch number
   }
+}
+
+// Clean button functionality
+document.getElementById('cleanBtn').addEventListener('click', () => {
+  // Clear search input
+  document.getElementById('query').value = '';
+  
+  // Clear results
+  document.getElementById('results').innerHTML = '';
+  
+  // Clear error messages
+  document.getElementById('error').textContent = '';
+  document.getElementById('error').className = '';
+  
+  // Clear status messages
+  document.getElementById('status').textContent = '';
+  
+  // Hide batch progress
+  document.getElementById('batchProgress').style.display = 'none';
+  
+  // Reset textarea height
+  const textarea = document.getElementById('query');
+  textarea.style.height = 'auto';
+  
+  // Focus back on search input
+  textarea.focus();
+});
+
+// Disable/enable clean button based on search state
+function updateCleanButtonState(isSearching) {
+  const cleanBtn = document.getElementById('cleanBtn');
+  cleanBtn.disabled = isSearching;
 }

@@ -177,6 +177,35 @@
       border-color: #999;
     }
     
+    #cleanBtn {
+      padding: 4px 8px;
+      background: #fff5f5;
+      color: #e53e3e;
+      border: 1px solid #feb2b2;
+      border-radius: 4px;
+      font-size: 10px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 5px;
+      margin-left: 5px;
+      display: inline-block;
+    }
+    
+    #cleanBtn:hover {
+      background: #fed7d7;
+      color: #c53030;
+      border-color: #fc8181;
+    }
+    
+    #cleanBtn:disabled {
+      background: #f5f5f5;
+      color: #ccc;
+      border-color: #e0e0e0;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
     .raw-modal {
       display: none;
       position: fixed;
@@ -545,6 +574,7 @@
     </div>
     
     <button id="rawBtn">RAW</button>
+    <button id="cleanBtn">🧹 CLEAN</button>
     
     <div id="batchProgress" style="display: none; background: #f0f4ff; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 3px solid #667eea;">
       <div style="font-size: 13px; font-weight: 600; color: #667eea; margin-bottom: 6px; display: flex; align-items: center; gap: 8px;">
