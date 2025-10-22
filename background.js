@@ -45,6 +45,14 @@ async function getAllBookmarks() {
   });
 }
 
+// Assign global numbers to bookmarks (1-indexed)
+function assignGlobalNumbers(bookmarks) {
+  return bookmarks.map((bookmark, index) => ({
+    ...bookmark,
+    globalNumber: index + 1
+  }));
+}
+
 // Helper function to format bookmark list based on field settings
 async function formatBookmarkList(bookmarks) {
   return new Promise((resolve) => {
@@ -81,22 +89,28 @@ async function formatBookmarkList(bookmarks) {
 // AI search using Ollama
 async function aiSearchWithOllama(query, ollamaUrl, ollamaModel, customPrompt, usePrompt) {
   const allBookmarks = await getAllBookmarks();
-
-  // Always include bookmarks list with selected fields
-  const bookmarkList = await formatBookmarkList(allBookmarks);
-
-  let prompt;
   
-  if (usePrompt === false) {
-    // Send bookmarks + query without instructions
-    prompt = `Here are all the user's bookmarks:
+  // Assign global numbers to bookmarks
+  const numberedBookmarks = assignGlobalNumbers(allBookmarks);
+  
+  // Get batch settings for Ollama
+  const batchSize = await getBatchSettings('ollama');
+  
+  // Check if batching is enabled
+  if (batchSize === 'none' || !batchSize) {
+    // No batching - use original logic
+    const bookmarkList = await formatBookmarkList(allBookmarks);
+
+    let prompt;
+    
+    if (usePrompt === false) {
+      prompt = `Here are all the user's bookmarks:
 
 ${bookmarkList}
 
 ${query}`;
-  } else {
-    // Send full prompt with bookmarks and instructions
-    const defaultPrompt = `You are a bookmark search assistant. Here are all the user's bookmarks:
+    } else {
+      const defaultPrompt = `You are a bookmark search assistant. Here are all the user's bookmarks:
 
 ${bookmarkList}
 
@@ -107,52 +121,110 @@ If no bookmarks match, return: NONE
 
 Your response:`;
 
-    prompt = defaultPrompt;
-    if (customPrompt) {
-      // Replace {SEARCH} with actual query and insert bookmarks
-      prompt = customPrompt.replace('{SEARCH}', query);
-      prompt = prompt.replace('[BOOKMARKS_WILL_BE_INSERTED_HERE]', bookmarkList);
+      prompt = defaultPrompt;
+      if (customPrompt) {
+        prompt = customPrompt.replace('{SEARCH}', query);
+        prompt = prompt.replace('[BOOKMARKS_WILL_BE_INSERTED_HERE]', bookmarkList);
+      }
     }
-  }
 
-  // Create abort controller for this request
+    currentSearchAbortController = new AbortController();
+    
+    const response = await fetch(`${ollamaUrl}/api/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model: ollamaModel,
+        prompt: prompt,
+        stream: false,
+      }),
+      signal: currentSearchAbortController.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`Ollama error: ${response.status}`);
+    }
+
+    const data = await response.json();
+    const aiResponse = data.response.trim();
+
+    if (aiResponse === "NONE") {
+      return { results: [], rawData: { sent: prompt, received: aiResponse } };
+    }
+
+    const indices = aiResponse.split(",").map((n) => parseInt(n.trim()) - 1);
+    const results = indices
+      .filter((i) => i >= 0 && i < allBookmarks.length)
+      .map((i) => allBookmarks[i]);
+
+    return { results, rawData: { sent: prompt, received: aiResponse } };
+  }
+  
+  // Batch processing enabled
+  const batches = divideToBatches(numberedBookmarks, batchSize);
+  
   currentSearchAbortController = new AbortController();
   
-  const response = await fetch(`${ollamaUrl}/api/generate`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      model: ollamaModel,
-      prompt: prompt,
-      stream: false,
-    }),
-    signal: currentSearchAbortController.signal,
-  });
-
-  if (!response.ok) {
-    throw new Error(`Ollama error: ${response.status}`);
-  }
-
-  const data = await response.json();
-  const aiResponse = data.response.trim();
-
-  if (aiResponse === "NONE") {
-    return { results: [], rawData: { sent: prompt, received: aiResponse } };
-  }
-
-  const indices = aiResponse.split(",").map((n) => parseInt(n.trim()) - 1);
-  const results = indices
-    .filter((i) => i >= 0 && i < allBookmarks.length)
-    .map((i) => allBookmarks[i]);
-
-  return { results, rawData: { sent: prompt, received: aiResponse } };
+  const resultNumbers = await processBatchSequentially(
+    batches, 
+    query, 
+    'ollama',
+    { ollamaUrl, ollamaModel },
+    customPrompt,
+    usePrompt
+  );
+  
+  const results = aggregateResults(resultNumbers, numberedBookmarks);
+  
+  return { 
+    results, 
+    rawData: { 
+      batches: batches.length, 
+      totalBookmarks: allBookmarks.length,
+      batchSize: batchSize
+    } 
+  };
 }
 
 // AI search using API providers
 async function aiSearchWithAPI(query, provider, apiKey, model, customPrompt, usePrompt) {
   const allBookmarks = await getAllBookmarks();
+  
+  // Assign global numbers to bookmarks
+  const numberedBookmarks = assignGlobalNumbers(allBookmarks);
+  
+  // Get batch settings for API
+  const batchSize = await getBatchSettings('api');
+  
+  // Check if batching is enabled
+  if (batchSize !== 'none' && batchSize) {
+    // Batch processing enabled
+    const batches = divideToBatches(numberedBookmarks, batchSize);
+    
+    currentSearchAbortController = new AbortController();
+    
+    const resultNumbers = await processBatchSequentially(
+      batches, 
+      query, 
+      'api',
+      { apiProvider: provider, apiKey, apiModel: model },
+      customPrompt,
+      usePrompt
+    );
+    
+    const results = aggregateResults(resultNumbers, numberedBookmarks);
+    
+    return { 
+      results, 
+      rawData: { 
+        batches: batches.length, 
+        totalBookmarks: allBookmarks.length,
+        batchSize: batchSize
+      } 
+    };
+  }
 
-  // Always include bookmarks list with selected fields
+  // No batching - use original logic
   const bookmarkList = await formatBookmarkList(allBookmarks);
 
   let userPrompt;
@@ -872,3 +944,247 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 });
+
+// Divide bookmarks into batches
+function divideToBatches(bookmarks, batchSize) {
+  if (!batchSize || batchSize === 'none') {
+    return [bookmarks]; // No batching - return all as single batch
+  }
+  
+  const size = parseInt(batchSize);
+  const batches = [];
+  
+  for (let i = 0; i < bookmarks.length; i += size) {
+    batches.push(bookmarks.slice(i, i + size));
+  }
+  
+  return batches;
+}
+
+// Get batch settings for current provider
+async function getBatchSettings(provider) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['apiBatchSize', 'ollamaBatchSize'], (data) => {
+      const key = provider === 'ollama' ? 'ollamaBatchSize' : 'apiBatchSize';
+      const batchSize = data[key] || (provider === 'ollama' ? '25' : 'none');
+      resolve(batchSize);
+    });
+  });
+}
+
+// Format batch for AI with global numbers
+async function formatBatchForAI(batch) {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['bookmarkFields'], (data) => {
+      const fields = data.bookmarkFields || {
+        includeTitle: true,
+        includeUrl: true,
+        includeFolder: true
+      };
+      
+      const formattedList = batch.map((b) => {
+        let parts = [`${b.globalNumber}.`];
+        
+        if (fields.includeTitle) {
+          parts.push(b.title);
+        }
+        
+        if (fields.includeUrl) {
+          parts.push(fields.includeTitle ? `- ${b.url}` : b.url);
+        }
+        
+        if (fields.includeFolder && b.path) {
+          parts.push(`(Folder: ${b.path})`);
+        }
+        
+        return parts.join(' ');
+      }).join("\n");
+      
+      resolve(formattedList);
+    });
+  });
+}
+
+// Parse AI response (comma-separated numbers or "NONE")
+function parseAIResponse(response) {
+  const trimmed = response.trim();
+  
+  if (trimmed === 'NONE' || trimmed === '' || !trimmed) {
+    return [];
+  }
+  
+  // Parse comma-separated numbers
+  return trimmed
+    .split(',')
+    .map(n => parseInt(n.trim()))
+    .filter(n => !isNaN(n) && n > 0);
+}
+
+// Aggregate results from all batches
+function aggregateResults(globalNumbers, allBookmarks) {
+  // Remove duplicates
+  const uniqueNumbers = [...new Set(globalNumbers)];
+  
+  // Map back to bookmarks
+  return uniqueNumbers
+    .map(num => allBookmarks.find(b => b.globalNumber === num))
+    .filter(b => b !== undefined);
+}
+
+// Process batches sequentially
+async function processBatchSequentially(batches, query, provider, settings, customPrompt, usePrompt) {
+  const allResultNumbers = [];
+  
+  for (let i = 0; i < batches.length; i++) {
+    try {
+      // Send progress update to popup
+      chrome.runtime.sendMessage({
+        action: 'batchProgress',
+        current: i + 1,
+        total: batches.length
+      }).catch(() => {
+        // Ignore if popup is closed
+      });
+      
+      // Format batch with global numbers
+      const batchText = await formatBatchForAI(batches[i]);
+      
+      // Build prompt with batch
+      let prompt;
+      if (usePrompt === false) {
+        prompt = `Here are bookmarks:\n\n${batchText}\n\n${query}`;
+      } else {
+        const defaultPrompt = `You are a bookmark search assistant. Here are bookmarks:\n\n${batchText}\n\nUser query: "${query}"\n\nBased on the query, return ONLY the numbers of the most relevant bookmarks (comma-separated). For example: 1,5,12\nIf no bookmarks match, return: NONE\n\nYour response:`;
+        
+        prompt = customPrompt 
+          ? customPrompt.replace('{SEARCH}', query).replace('[BOOKMARKS_WILL_BE_INSERTED_HERE]', batchText)
+          : defaultPrompt;
+      }
+      
+      // Send to AI based on provider
+      let aiResponse;
+      if (provider === 'ollama') {
+        aiResponse = await sendToOllama(prompt, settings.ollamaUrl, settings.ollamaModel);
+      } else {
+        aiResponse = await sendToAPIProvider(prompt, settings.apiProvider, settings.apiKey, settings.apiModel);
+      }
+      
+      // Parse response
+      const numbers = parseAIResponse(aiResponse);
+      allResultNumbers.push(...numbers);
+      
+    } catch (error) {
+      console.error(`Batch ${i + 1} failed:`, error);
+      // Continue with other batches
+    }
+  }
+  
+  return allResultNumbers;
+}
+
+// Send to Ollama
+async function sendToOllama(prompt, ollamaUrl, ollamaModel) {
+  const response = await fetch(`${ollamaUrl}/api/generate`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: ollamaModel,
+      prompt: prompt,
+      stream: false,
+    }),
+    signal: currentSearchAbortController?.signal,
+  });
+
+  if (!response.ok) {
+    throw new Error(`Ollama error: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.response.trim();
+}
+
+// Send to API Provider
+async function sendToAPIProvider(prompt, provider, apiKey, model) {
+  // This will use the existing API logic
+  // For now, we'll create a simplified version
+  let apiUrl, headers, body;
+
+  switch (provider) {
+    case "openai":
+      apiUrl = "https://api.openai.com/v1/chat/completions";
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        model: model || "gpt-3.5-turbo",
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+      };
+      break;
+
+    case "anthropic":
+      apiUrl = "https://api.anthropic.com/v1/messages";
+      headers = {
+        "Content-Type": "application/json",
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      };
+      body = {
+        model: model || "claude-3-haiku-20240307",
+        max_tokens: 1024,
+        messages: [{ role: "user", content: prompt }],
+      };
+      break;
+
+    case "google":
+      apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${
+        model || "gemini-pro"
+      }:generateContent?key=${apiKey}`;
+      headers = {
+        "Content-Type": "application/json",
+      };
+      body = {
+        contents: [{ parts: [{ text: prompt }] }],
+      };
+      break;
+
+    default:
+      // Use OpenAI-compatible format for other providers
+      apiUrl = getAPIUrl(provider, model, apiKey);
+      headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      };
+      body = {
+        model: model,
+        messages: [{ role: "user", content: prompt }],
+      };
+  }
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: headers,
+    body: JSON.stringify(body),
+    signal: currentSearchAbortController?.signal,
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API error (${response.status}): ${errorText}`);
+  }
+
+  const data = await response.json();
+  
+  // Parse response based on provider
+  switch (provider) {
+    case "openai":
+      return data.choices[0].message.content.trim();
+    case "anthropic":
+      return data.content[0].text.trim();
+    case "google":
+      return data.candidates[0].content.parts[0].text.trim();
+    default:
+      return data.choices[0].message.content.trim();
+  }
+}

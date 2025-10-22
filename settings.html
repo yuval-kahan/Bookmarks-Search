@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -936,6 +936,7 @@
     <button class="save-btn" id="saveBtn">💾 Save Settings</button>
     <button class="prompt-btn" id="promptBtn">📝 Edit Prompt</button>
     <button class="prompt-btn" id="fieldsBtn">📋 Bookmark Fields</button>
+    <button class="prompt-btn" id="batchBtn">📦 Bookmarks Batch</button>
     <div id="saveStatus"></div>
     
     <div class="info-box">
@@ -1041,6 +1042,73 @@
     </div>
   </div>
   
+    <!-- Batch Settings Screen -->
+  <div class="prompt-editor-screen" id="batchSettingsScreen" style="display: none;">
+    <div class="prompt-editor-header">
+      <div class="back-icon" id="batchBackBtn" title="Back"></div>
+      <h1> Bookmarks Batch</h1>
+      <div style="width: 29px;"></div>
+    </div>
+    
+    <div class="prompt-editor-content">
+      <div style="background: #f0f4ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 3px solid #667eea;">
+        <strong>Configure batch processing:</strong><br>
+        <span style="font-size: 12px; color: #666;">Divide bookmarks into smaller batches for AI providers with limited context windows. Smaller batches work better for Ollama.</span>
+      </div>
+      
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        <!-- API Batch Settings -->
+        <div id="apiBatchSettings">
+          <label style="display: block; font-weight: 600; font-size: 14px; color: #333; margin-bottom: 8px;">
+             Batch Size for API Providers:
+          </label>
+          <select id="apiBatchSize" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 13px; cursor: pointer; transition: border-color 0.3s ease;">
+            <option value="none">None (send all at once)</option>
+            <option value="20">20 bookmarks per batch</option>
+            <option value="50">50 bookmarks per batch</option>
+            <option value="80">80 bookmarks per batch</option>
+            <option value="100">100 bookmarks per batch</option>
+            <option value="200">200 bookmarks per batch</option>
+            <option value="250">250 bookmarks per batch</option>
+            <option value="300">300 bookmarks per batch</option>
+          </select>
+          <div style="font-size: 11px; color: #666; margin-top: 6px;">
+             Most API providers have large context windows. Default: None
+          </div>
+        </div>
+        
+        <!-- Ollama Batch Settings -->
+        <div id="ollamaBatchSettings">
+          <label style="display: block; font-weight: 600; font-size: 14px; color: #333; margin-bottom: 8px;">
+             Batch Size for Ollama:
+          </label>
+          <select id="ollamaBatchSize" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 13px; cursor: pointer; transition: border-color 0.3s ease;">
+            <option value="none">None (send all)</option>
+            <option value="10">10 bookmarks per batch</option>
+            <option value="20">20 bookmarks per batch</option>
+            <option value="25">25 bookmarks per batch</option>
+            <option value="30">30 bookmarks per batch</option>
+            <option value="50">50 bookmarks per batch</option>
+            <option value="80">80 bookmarks per batch</option>
+            <option value="100">100 bookmarks per batch</option>
+          </select>
+          <div style="font-size: 11px; color: #666; margin-top: 6px;">
+             Recommended: 25-50 for 8B models, 10-20 for smaller models. Default: 25
+          </div>
+        </div>
+      </div>
+      
+      <div style="background: #fff3cd; padding: 12px; border-radius: 8px; margin-top: 20px; border-left: 3px solid #ffc107; font-size: 12px;">
+        ℹ <strong>How it works:</strong> Your bookmarks are numbered (1, 2, 3...) and divided into batches. Each batch is sent separately to the AI, and results are combined automatically.
+      </div>
+      
+      <div class="prompt-editor-buttons" style="margin-top: 20px;">
+        <button class="prompt-save-btn" id="batchSaveBtn"> Save Settings</button>
+      </div>
+    </div>
+  </div>
+
   <script src="settings.js"></script>
 </body>
 </html>
+

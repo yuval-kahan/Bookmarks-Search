@@ -1750,3 +1750,66 @@ document.getElementById('fieldsBackBtn').addEventListener('click', closeFieldsEd
 
 // Fields save button
 document.getElementById('fieldsSaveBtn').addEventListener('click', saveFieldSettings);
+
+// Batch Settings Functions
+function openBatchSettings() {
+  const mainContainer = document.querySelector(".container");
+  const batchScreen = document.getElementById("batchSettingsScreen");
+
+  // Hide main settings
+  mainContainer.style.display = "none";
+  batchScreen.style.display = "block";
+
+  // Load saved batch settings
+  loadBatchSettings();
+}
+
+function closeBatchSettings() {
+  const mainContainer = document.querySelector(".container");
+  const batchScreen = document.getElementById("batchSettingsScreen");
+
+  // Show main settings
+  mainContainer.style.display = "block";
+  batchScreen.style.display = "none";
+}
+
+function loadBatchSettings() {
+  chrome.storage.local.get(['apiBatchSize', 'ollamaBatchSize'], (data) => {
+    const apiBatchSize = data.apiBatchSize || 'none';
+    const ollamaBatchSize = data.ollamaBatchSize || '25';
+    
+    document.getElementById('apiBatchSize').value = apiBatchSize;
+    document.getElementById('ollamaBatchSize').value = ollamaBatchSize;
+  });
+}
+
+function saveBatchSettings() {
+  const apiBatchSize = document.getElementById('apiBatchSize').value;
+  const ollamaBatchSize = document.getElementById('ollamaBatchSize').value;
+  
+  chrome.storage.local.set({ 
+    apiBatchSize: apiBatchSize,
+    ollamaBatchSize: ollamaBatchSize
+  }, () => {
+    // Show success message
+    const saveBtn = document.getElementById('batchSaveBtn');
+    const originalText = saveBtn.textContent;
+    saveBtn.textContent = '✓ Saved!';
+    saveBtn.style.background = '#48bb78';
+    
+    setTimeout(() => {
+      saveBtn.textContent = originalText;
+      saveBtn.style.background = '';
+      closeBatchSettings();
+    }, 1000);
+  });
+}
+
+// Batch button event listener
+document.getElementById('batchBtn').addEventListener('click', openBatchSettings);
+
+// Batch back button
+document.getElementById('batchBackBtn').addEventListener('click', closeBatchSettings);
+
+// Batch save button
+document.getElementById('batchSaveBtn').addEventListener('click', saveBatchSettings);

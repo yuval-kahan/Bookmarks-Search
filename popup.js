@@ -780,3 +780,35 @@ function openRawModalInNewTab() {
 
 // Event listener for RAW button
 document.getElementById('rawBtn').addEventListener('click', openRawModal);
+
+// Listen for batch progress messages
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === 'batchProgress') {
+    const progressDiv = document.getElementById('batchProgress');
+    const progressText = document.getElementById('batchProgressText');
+    const progressBar = document.getElementById('batchProgressBar');
+    
+    // Show progress
+    progressDiv.style.display = 'block';
+    
+    // Update text
+    progressText.textContent = `Batch ${message.current} of ${message.total}`;
+    
+    // Update progress bar
+    const percentage = (message.current / message.total) * 100;
+    progressBar.style.width = `${percentage}%`;
+    
+    // Hide when complete
+    if (message.current === message.total) {
+      setTimeout(() => {
+        progressDiv.style.display = 'none';
+      }, 1000);
+    }
+  }
+});
+
+// Hide progress on new search
+const originalSearchFunction = document.getElementById('searchBtn').onclick;
+document.getElementById('searchBtn').addEventListener('click', () => {
+  document.getElementById('batchProgress').style.display = 'none';
+});
