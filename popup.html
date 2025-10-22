@@ -642,6 +642,212 @@
       font-weight: 400;
     }
     
+    /* Scope Filter Styles */
+    .scope-filter-container {
+      margin-bottom: 12px;
+    }
+    
+    .scope-filter-btn {
+      width: 100%;
+      padding: 8px 12px;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+      border: 2px solid #e0e7ff;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: #333;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      user-select: none;
+    }
+    
+    .scope-filter-btn:hover {
+      background: linear-gradient(135deg, #e8f0ff 0%, #d8e7ff 100%);
+      border-color: #667eea;
+      transform: translateX(2px);
+    }
+    
+    .scope-filter-btn.filtered {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      border-color: #667eea;
+    }
+    
+    .scope-icon {
+      font-size: 14px;
+    }
+    
+    .scope-text {
+      flex: 1;
+      text-align: left;
+    }
+    
+    .scope-arrow {
+      font-size: 10px;
+      transition: transform 0.3s ease;
+    }
+    
+    .scope-arrow.open {
+      transform: rotate(180deg);
+    }
+    
+    /* Scope Dropdown Styles */
+    .scope-dropdown {
+      position: absolute;
+      left: 20px;
+      right: 20px;
+      background: white;
+      border: 2px solid #667eea;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+      z-index: 1000;
+      max-height: 350px;
+      display: flex;
+      flex-direction: column;
+      animation: dropdownFadeIn 0.2s ease;
+    }
+    
+    .scope-dropdown-header {
+      padding: 12px;
+      border-bottom: 1px solid #e0e7ff;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e8f0ff 100%);
+    }
+    
+    .scope-search {
+      width: 100%;
+      padding: 8px 12px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 12px;
+      margin-bottom: 10px;
+      transition: border-color 0.3s ease;
+    }
+    
+    .scope-search:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .scope-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    
+    .scope-action-btn {
+      flex: 1;
+      min-width: 70px;
+      padding: 6px 10px;
+      background: white;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: #667eea;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .scope-action-btn:hover {
+      background: #f0f4ff;
+      border-color: #667eea;
+    }
+    
+    .scope-tree {
+      overflow-y: auto;
+      max-height: 250px;
+      padding: 8px;
+    }
+    
+    .scope-tree::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .scope-tree::-webkit-scrollbar-track {
+      background: #f1f1f1;
+    }
+    
+    .scope-tree::-webkit-scrollbar-thumb {
+      background: #667eea;
+      border-radius: 3px;
+    }
+    
+    .scope-tree::-webkit-scrollbar-thumb:hover {
+      background: #5568d3;
+    }
+    
+    /* Tree Node Styles */
+    .tree-node {
+      margin-bottom: 4px;
+    }
+    
+    .node-content {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.2s ease;
+      user-select: none;
+    }
+    
+    .node-content:hover {
+      background: #f8f9ff;
+    }
+    
+    .node-checkbox {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      accent-color: #667eea;
+      flex-shrink: 0;
+    }
+    
+    .node-expand {
+      width: 16px;
+      font-size: 10px;
+      color: #667eea;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: transform 0.2s ease;
+    }
+    
+    .node-expand.expanded {
+      transform: rotate(90deg);
+    }
+    
+    .node-icon {
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    
+    .node-title {
+      flex: 1;
+      font-size: 12px;
+      color: #333;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .node-children {
+      margin-left: 20px;
+      display: none;
+    }
+    
+    .node-children.expanded {
+      display: block;
+    }
+    
+    .tree-node.hidden {
+      display: none;
+    }
+    
     .history-screen {
       display: none;
       position: absolute;
@@ -1024,6 +1230,31 @@
     
     <div class="search-box">
       <textarea id="query" placeholder="Search your bookmarks..." rows="1"></textarea>
+    </div>
+    
+    <!-- Scope Filter -->
+    <div class="scope-filter-container" style="position: relative;">
+      <button class="scope-filter-btn" id="scopeFilterBtn">
+        <span class="scope-icon">🔍</span>
+        <span class="scope-text" id="scopeText">Search in: All bookmarks</span>
+        <span class="scope-arrow" id="scopeArrow">▼</span>
+      </button>
+      
+      <!-- Scope Dropdown -->
+      <div class="scope-dropdown" id="scopeDropdown" style="display: none;">
+        <div class="scope-dropdown-header">
+          <input type="text" class="scope-search" id="scopeSearch" placeholder="🔍 Search folders...">
+          <div class="scope-actions">
+            <button class="scope-action-btn" id="selectAllBtn">Select All</button>
+            <button class="scope-action-btn" id="clearAllBtn">Clear All</button>
+            <button class="scope-action-btn" id="expandAllBtn">Expand All</button>
+            <button class="scope-action-btn" id="minimizeAllBtn">Minimize All</button>
+          </div>
+        </div>
+        <div class="scope-tree" id="scopeTree">
+          <!-- Tree nodes will be inserted here -->
+        </div>
+      </div>
     </div>
     
     <div class="button-group">
