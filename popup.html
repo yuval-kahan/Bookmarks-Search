@@ -626,14 +626,6 @@
       color: #333;
     }
     
-    .actions-section {
-      display: flex;
-      justify-content: flex-end;
-      padding: 15px;
-      border-bottom: 1px solid #e0e0e0;
-      background: white;
-    }
-    
     .delete-all-btn {
       padding: 8px 16px;
       background: #f0f0f0;
@@ -644,6 +636,9 @@
       font-weight: 600;
       cursor: pointer;
       transition: all 0.3s ease;
+      margin-top: 10px;
+      display: block;
+      width: 100%;
     }
     
     .delete-all-btn:hover {
@@ -881,12 +876,8 @@
         </div>
         <button id="applyCustomFilter">Apply Filter</button>
         <button id="clearCustomFilter">Clear</button>
+        <button id="deleteAllHistory" class="delete-all-btn">🗑️ Delete All</button>
       </div>
-    </div>
-    
-    <!-- Actions Section (inside history area) -->
-    <div class="actions-section">
-      <button id="deleteAllHistory" class="delete-all-btn">🗑️ Delete All</button>
     </div>
     
     <div class="history-list" id="historyList">
