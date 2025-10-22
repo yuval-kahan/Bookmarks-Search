@@ -250,6 +250,69 @@ function handleDeepSearchChange() {
   saveDeepSearchState();
 }
 
+// Update AI features based on search mode
+function updateAIFeaturesState() {
+  chrome.storage.local.get(['searchMode'], (data) => {
+    const searchMode = data.searchMode || 'simple';
+    const isAIMode = searchMode === 'ai';
+    
+    // Get all AI-related elements
+    const usePromptCheckbox = document.getElementById('usePromptCheckbox');
+    const usePromptLabel = usePromptCheckbox.closest('.use-prompt-label');
+    const usePromptContainer = usePromptCheckbox.closest('.use-prompt-container');
+    
+    const deepSearchCheckbox = document.getElementById('deepSearchCheckbox');
+    const deepSearchLabel = deepSearchCheckbox.closest('.deep-search-label');
+    const deepSearchContainer = deepSearchCheckbox.closest('.deep-search-container');
+    
+    const preMarkdownCheckbox = document.getElementById('preMarkdownCheckbox');
+    const preMarkdownLabel = preMarkdownCheckbox.closest('.pre-markdown-label');
+    const preMarkdownContainer = preMarkdownCheckbox.closest('.pre-markdown-container');
+    
+    if (isAIMode) {
+      // AI Mode - Enable and restore saved states
+      
+      // Use Prompt
+      usePromptCheckbox.disabled = false;
+      usePromptLabel.style.opacity = '1';
+      usePromptLabel.style.cursor = 'pointer';
+      usePromptCheckbox.style.cursor = 'pointer';
+      loadUsePromptState();
+      
+      // Deep Search
+      deepSearchCheckbox.disabled = false;
+      deepSearchLabel.style.opacity = '1';
+      deepSearchLabel.style.cursor = 'pointer';
+      deepSearchCheckbox.style.cursor = 'pointer';
+      loadDeepSearchState();
+      
+    } else {
+      // Simple Mode - Disable and uncheck all AI features
+      
+      // Use Prompt
+      usePromptCheckbox.disabled = true;
+      usePromptCheckbox.checked = false;
+      usePromptLabel.style.opacity = '0.6';
+      usePromptLabel.style.cursor = 'not-allowed';
+      usePromptCheckbox.style.cursor = 'not-allowed';
+      
+      // Deep Search
+      deepSearchCheckbox.disabled = true;
+      deepSearchCheckbox.checked = false;
+      deepSearchLabel.style.opacity = '0.6';
+      deepSearchLabel.style.cursor = 'not-allowed';
+      deepSearchCheckbox.style.cursor = 'not-allowed';
+      
+      // Pre Markdown
+      preMarkdownCheckbox.disabled = true;
+      preMarkdownCheckbox.checked = false;
+      preMarkdownLabel.style.opacity = '0.6';
+      preMarkdownLabel.style.cursor = 'not-allowed';
+      preMarkdownCheckbox.style.cursor = 'not-allowed';
+    }
+  });
+}
+
 // Load and display current search mode
 function updateSearchModeIndicator() {
   chrome.storage.local.get(
@@ -326,20 +389,41 @@ document.getElementById("settingsBtn").addEventListener("click", () => {
 });
 
 // Use Prompt checkbox event listener
-document.getElementById('usePromptCheckbox').addEventListener('change', saveUsePromptState);
+document.getElementById('usePromptCheckbox').addEventListener('change', (e) => {
+  // Only save if not disabled
+  if (!e.target.disabled) {
+    saveUsePromptState();
+  }
+});
 
 // Deep Search checkbox event listeners
-document.getElementById('deepSearchCheckbox').addEventListener('change', handleDeepSearchChange);
-document.getElementById('preMarkdownCheckbox').addEventListener('change', saveDeepSearchState);
+document.getElementById('deepSearchCheckbox').addEventListener('change', (e) => {
+  // Only handle if not disabled
+  if (!e.target.disabled) {
+    handleDeepSearchChange();
+  }
+});
+
+document.getElementById('preMarkdownCheckbox').addEventListener('change', (e) => {
+  // Only save if not disabled
+  if (!e.target.disabled) {
+    saveDeepSearchState();
+  }
+});
 
 // Update indicator on load
 updateSearchModeIndicator();
 
-// Load Use Prompt state on page load
-loadUsePromptState();
+// Update AI features state based on search mode
+updateAIFeaturesState();
 
-// Load Deep Search state on page load
-loadDeepSearchState();
+// Listen for storage changes (when user changes mode in settings)
+chrome.storage.onChanged.addListener((changes, namespace) => {
+  if (namespace === 'local' && changes.searchMode) {
+    updateAIFeaturesState();
+    updateSearchModeIndicator();
+  }
+});
 
 // State management functions
 function savePopupState(state) {
@@ -417,8 +501,14 @@ let abortSearch = false;
 
 // Check if Deep Search warning should be shown
 async function shouldShowDeepSearchWarning() {
-  const deepSearchEnabled = document.getElementById('deepSearchCheckbox').checked;
-  const preMarkdownEnabled = document.getElementById('preMarkdownCheckbox').checked;
+  const deepSearchCheckbox = document.getElementById('deepSearchCheckbox');
+  
+  // Don't show if checkbox is disabled (Simple mode)
+  if (deepSearchCheckbox.disabled) {
+    return false;
+  }
+  
+  const deepSearchEnabled = deepSearchCheckbox.checked;
   
   if (!deepSearchEnabled) {
     return false; // Deep Search not enabled
@@ -485,14 +575,6 @@ function showDeepSearchWarning() {
 
 // Search functionality
 document.getElementById("searchBtn").addEventListener("click", async () => {
-  // Check if Deep Search warning should be shown
-  if (await shouldShowDeepSearchWarning()) {
-    const shouldContinue = await showDeepSearchWarning();
-    if (!shouldContinue) {
-      return; // User cancelled
-    }
-  }
-  
   const query = document.getElementById("query").value.trim();
   const errorDiv = document.getElementById("error");
   const statusDiv = document.getElementById("status");
@@ -506,10 +588,19 @@ document.getElementById("searchBtn").addEventListener("click", async () => {
   list.innerHTML = "";
   abortSearch = false;
 
+  // Validate query first - before any warnings
   if (!query) {
-    errorDiv.textContent = "Please enter a search term";
+    errorDiv.textContent = "⚠️ Please enter a search term";
     errorDiv.className = "error";
     return;
+  }
+  
+  // Check if Deep Search warning should be shown
+  if (await shouldShowDeepSearchWarning()) {
+    const shouldContinue = await showDeepSearchWarning();
+    if (!shouldContinue) {
+      return; // User cancelled
+    }
   }
 
   // Show stop button, disable search button and clean button
